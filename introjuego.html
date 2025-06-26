@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selección de Color - Mi Juego</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        .preview-section {
+            margin-bottom: 40px;
+        }
+
+        .box-preview {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #888, #666);
+            border: 4px solid #fff;
+            border-radius: 15px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .box-preview:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        .color-name {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 15px;
+            margin-bottom: 40px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .color-option {
+            width: 80px;
+            height: 80px;
+            border-radius: 15px;
+            cursor: pointer;
+            border: 4px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-option.selected {
+            border-color: #fff;
+            transform: scale(1.15);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .color-option::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .color-option.selected::after {
+            opacity: 1;
+        }
+
+        /* Colores específicos */
+        .color-red { background: linear-gradient(145deg, #ff6b6b, #ee5a24); }
+        .color-blue { background: linear-gradient(145deg, #4a90e2, #2171b5); }
+        .color-green { background: linear-gradient(145deg, #55efc4, #00b894); }
+        .color-purple { background: linear-gradient(145deg, #a29bfe, #6c5ce7); }
+        .color-orange { background: linear-gradient(145deg, #fdcb6e, #e17055); }
+        .color-pink { background: linear-gradient(145deg, #fd79a8, #e84393); }
+        .color-yellow { background: linear-gradient(145deg, #fdcb6e, #f39c12); }
+        .color-cyan { background: linear-gradient(145deg, #74b9ff, #0984e3); }
+        .color-gray { background: linear-gradient(145deg, #888, #666); }
+        .color-black { background: linear-gradient(145deg, #2d3436, #636e72); }
+
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            min-width: 140px;
+        }
+
+        .btn-play {
+            background: linear-gradient(145deg, #00b894, #55efc4);
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
+        }
+
+        .btn-play:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 184, 148, 0.6);
+            background: linear-gradient(145deg, #55efc4, #00b894);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .color-info {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .rgb-values {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .color-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .color-option {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .box-preview {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Efecto de partículas de fondo */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: float-particle 6s linear infinite;
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Partículas de fondo -->
+    <div class="particles" id="particles"></div>
+
+    <div class="container">
+        <h1 class="title">🎮 Mi Juego 3D</h1>
+        <p class="subtitle">Personaliza tu personaje seleccionando un color</p>
+        
+        <div class="preview-section">
+            <div class="box-preview" id="boxPreview">🎮</div>
+            <div class="color-name" id="colorName">Gris Clásico</div>
+            <div class="color-info">
+                <div class="rgb-values" id="rgbValues">RGB: (0.7, 0.7, 0.7)</div>
+            </div>
+        </div>
+
+        <div class="color-grid">
+            <div class="color-option color-gray selected" 
+                 data-color="gray" 
+                 data-name="Gris Clásico" 
+                 data-rgb="0.7, 0.7, 0.7"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-red" 
+                 data-color="red" 
+                 data-name="Rojo Fuego" 
+                 data-rgb="1.0, 0.2, 0.2"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-blue" 
+                 data-color="blue" 
+                 data-name="Azul Océano" 
+                 data-rgb="0.2, 0.4, 1.0"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-green" 
+                 data-color="green" 
+                 data-name="Verde Esmeralda" 
+                 data-rgb="0.2, 0.8, 0.4"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-purple" 
+                 data-color="purple" 
+                 data-name="Púrpura Místico" 
+                 data-rgb="0.6, 0.3, 0.9"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-orange" 
+                 data-color="orange" 
+                 data-name="Naranja Solar" 
+                 data-rgb="1.0, 0.6, 0.2"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-pink" 
+                 data-color="pink" 
+                 data-name="Rosa Neón" 
+                 data-rgb="1.0, 0.4, 0.7"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-yellow" 
+                 data-color="yellow" 
+                 data-name="Amarillo Dorado" 
+                 data-rgb="1.0, 0.9, 0.2"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-cyan" 
+                 data-color="cyan" 
+                 data-name="Cian Eléctrico" 
+                 data-rgb="0.2, 0.8, 1.0"
+                 onclick="selectColor(this)">
+            </div>
+            <div class="color-option color-black" 
+                 data-color="black" 
+                 data-name="Negro Sombra" 
+                 data-rgb="0.1, 0.1, 0.1"
+                 onclick="selectColor(this)">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-play" onclick="startGame()">
+                🚀 ¡Jugar Ahora!
+            </button>
+            <button class="btn btn-secondary" onclick="resetSelection()">
+                🔄 Reiniciar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = 'gray';
+        let selectedRGB = '0.7, 0.7, 0.7';
+
+        // Crear partículas de fondo
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Seleccionar color
+        function selectColor(element) {
+            // Remover selección anterior
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+
+            // Agregar selección actual
+            element.classList.add('selected');
+
+            // Obtener datos del color
+            selectedColor = element.dataset.color;
+            const colorName = element.dataset.name;
+            selectedRGB = element.dataset.rgb;
+
+            // Actualizar preview
+            const preview = document.getElementById('boxPreview');
+            const colorNameElement = document.getElementById('colorName');
+            const rgbValues = document.getElementById('rgbValues');
+
+            // Obtener el gradiente del color seleccionado
+            const computedStyle = window.getComputedStyle(element);
+            preview.style.background = computedStyle.background;
+
+            colorNameElement.textContent = colorName;
+            rgbValues.textContent = `RGB: (${selectedRGB})`;
+
+            // Efecto de sonido (simulado con vibración si está disponible)
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+
+            console.log(`Color seleccionado: ${colorName} - RGB: (${selectedRGB})`);
+        }
+
+        // Iniciar juego
+        function startGame() {
+            // Aquí guardarías el color seleccionado y pasarías a PlayCanvas
+            console.log('Iniciando juego con color:', selectedColor);
+            console.log('Valores RGB para PlayCanvas:', selectedRGB);
+            
+            // Simular guardado en localStorage para PlayCanvas
+            localStorage.setItem('playerColor', selectedColor);
+            localStorage.setItem('playerColorRGB', selectedRGB);
+
+            // Mostrar mensaje de confirmación
+            alert(`🎮 ¡Perfecto! Tu personaje será ${document.getElementById('colorName').textContent}.\n\nPuedes usar estos valores RGB en PlayCanvas:\n(${selectedRGB})\n\n¡Que disfrutes el juego!`);
+
+            // Aquí normalmente redirigiría a tu juego de PlayCanvas
+            // window.location.href = 'tu-juego-playcanvas.html';
+        }
+
+        // Reiniciar selección
+        function resetSelection() {
+            // Volver al color por defecto
+            const defaultOption = document.querySelector('.color-gray');
+            selectColor(defaultOption);
+        }
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            
+            // Animación de entrada
+            setTimeout(() => {
+                document.querySelector('.container').style.opacity = '1';
+            }, 100);
+        });
+
+        // Efectos de teclado
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                startGame();
+            } else if (event.key === 'Escape') {
+                resetSelection();
+            }
+        });
+
+        // Función para usar en PlayCanvas
+        function getSelectedColorForPlayCanvas() {
+            const rgb = selectedRGB.split(', ').map(parseFloat);
+            return {
+                r: rgb[0],
+                g: rgb[1],
+                b: rgb[2]
+            };
+        }
+
+        // Mostrar información técnica para desarrollo
+        console.log('=== INFORMACIÓN PARA PLAYCANVAS ===');
+        console.log('Para usar el color seleccionado en tu script de PlayCanvas:');
+        console.log('');
+        console.log('// En tu script initialize():');
+        console.log('var colorGuardado = localStorage.getItem("playerColorRGB");');
+        console.log('if (colorGuardado) {');
+        console.log('    var rgb = colorGuardado.split(", ").map(parseFloat);');
+        console.log('    this.cambiarColor(rgb[0], rgb[1], rgb[2]);');
+        console.log('}');
+        console.log('');
+        console.log('// O directamente:');
+        console.log('this.cambiarColor(0.7, 0.7, 0.7); // Para gris por ejemplo');
+    </script>
+</body>
+</html>
