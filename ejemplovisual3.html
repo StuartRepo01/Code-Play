@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Proyectiles del Villano - Explicación Completa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .game-world {
+            width: 100%;
+            height: 400px;
+            background: #1a1a2e;
+            border: 3px solid #16213e;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .coordinate-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #888, #666);
+            border: 2px solid #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .villain {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, #4a90e2, #2171b5);
+            border: 2px solid #1565c0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .villain.attacking {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            border-color: #a93226;
+            animation: pulse-attack 1s infinite;
+        }
+
+        @keyframes pulse-attack {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .detection-range {
+            position: absolute;
+            border: 3px dashed rgba(255, 193, 7, 0.6);
+            border-radius: 50%;
+            background: rgba(255, 193, 7, 0.1);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .projectile {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, #ff4757, #ff3742);
+            border: 1px solid #ff2f3a;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.8);
+            z-index: 8;
+            animation: projectile-glow 0.5s infinite alternate;
+        }
+
+        @keyframes projectile-glow {
+            0% { box-shadow: 0 0 8px rgba(255, 71, 87, 0.8); }
+            100% { box-shadow: 0 0 15px rgba(255, 71, 87, 1); }
+        }
+
+        .trajectory-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(255, 71, 87, 0.8), rgba(255, 71, 87, 0.3));
+            pointer-events: none;
+            z-index: 6;
+            transform-origin: left center;
+        }
+
+        .impact-effect {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #ff4757;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: impact-ripple 0.5s ease-out;
+            z-index: 15;
+        }
+
+        @keyframes impact-ripple {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+                border-width: 4px;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+
+        .controls-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .movement-controls {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #9b59b6, #8e44ad);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .control-btn.pressed {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            transform: scale(0.95);
+        }
+
+        .action-btn {
+            background: linear-gradient(145deg, #28a745, #20c997);
+            grid-column: 1 / 4;
+            margin-top: 10px;
+        }
+
+        .stats-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label {
+            color: #ccc;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .villain-status {
+            text-align: center;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .peaceful {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+
+        .attacking {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #f44336;
+            color: #f44336;
+            animation: status-pulse 1s infinite;
+        }
+
+        @keyframes status-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+        }
+
+        .code-explanation {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            border-left: 4px solid #9b59b6;
+            margin: 15px 0;
+        }
+
+        .variable-highlight {
+            background: rgba(255, 255, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .concept-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #9b59b6;
+        }
+
+        .math-example {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #FFC107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .step-by-step {
+            counter-reset: step-counter;
+        }
+
+        .step {
+            counter-increment: step-counter;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #9b59b6;
+            position: relative;
+        }
+
+        .step::before {
+            content: "Paso " counter(step-counter);
+            background: #9b59b6;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            top: -8px;
+            left: 15px;
+        }
+
+        .interactive-demo {
+            background: rgba(33, 150, 243, 0.1);
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .projectile-info {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .warning-box {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #FFC107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .timer-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #ffd700;
+        }
+
+        .projectile-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #ff4757;
+        }
+
+        .state-machine {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+
+        .state {
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .state.active {
+            background: #9b59b6;
+            color: white;
+            font-weight: bold;
+            transform: scale(1.1);
+        }
+
+        .state.inactive {
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
+        }
+
+        .hit-effect {
+            animation: hit-flash 0.3s ease-out;
+        }
+
+        @keyframes hit-flash {
+            0% { background: linear-gradient(145deg, #ff4757, #ff3742); }
+            50% { background: linear-gradient(145deg, #ffffff, #f1f1f1); }
+            100% { background: linear-gradient(145deg, #888, #666); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Parte 3: Sistema de Proyectiles del Villano</h1>
+
+        <!-- INTRODUCCIÓN -->
+        <div class="section">
+            <h2>🚀 ¿Qué vamos a aprender?</h2>
+            <p>En esta parte final crearemos el sistema más complejo: un villano inteligente que detecta al jugador y le dispara proyectiles. Aprenderemos:</p>
+            <ul>
+                <li>🎯 <strong>Detección de Rango:</strong> El villano "ve" al jugador cuando está cerca</li>
+                <li>🔫 <strong>Creación Dinámica:</strong> Generar proyectiles en tiempo de ejecución</li>
+                <li>📐 <strong>Cálculo de Trayectorias:</strong> Apuntar hacia donde está el jugador</li>
+                <li>💥 <strong>Colisiones de Proyectiles:</strong> Detectar impactos y crear efectos</li>
+                <li>🎨 <strong>Estados del Villano:</strong> Cambiar comportamiento según la situación</li>
+                <li>⏰ <strong>Temporizadores:</strong> Controlar la frecuencia de disparo</li>
+            </ul>
+
+            <div class="concept-box">
+                <h3>🔑 Conceptos Clave de esta Parte</h3>
+                <p>El sistema de proyectiles combina todo lo aprendido anteriormente:</p>
+                <ul>
+                    <li>🎮 <strong>Arrays Dinámicos:</strong> Lista de proyectiles que cambia constantemente</li>
+                    <li>🦹‍♂️ <strong>IA Básica:</strong> El villano toma decisiones automáticamente</li>
+                    <li>📊 <strong>Gestión de Memoria:</strong> Crear y destruir objetos eficientemente</li>
+                    <li>🎯 <strong>Predicción:</strong> Calcular dónde estará el jugador</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 1: DETECCIÓN DE RANGO -->
+        <div class="section">
+            <h2>👁️ PUNTO 1: Sistema de Detección de Rango</h2>
+
+            <div class="concept-box">
+                <h3>🔍 ¿Cómo detecta el villano al jugador?</h3>
+                <p>El villano tiene un <strong>rango de detección</strong> - un círculo invisible a su alrededor. Cuando el jugador entra en este rango, el villano cambia automáticamente a modo ataque.</p>
+                <div class="math-example">
+<strong>Lógica de Detección:</strong>
+• Rango de detección = 8 unidades (círculo grande)
+• Cada frame: calcular distancia al jugador
+• SI distancia < 8 → MODO ATAQUE
+• SI distancia >= 8 → MODO PACÍFICO
+
+<strong>Diferencia con colisiones:</strong>
+• Colisión = 1.5 unidades (tocar físicamente)
+• Detección = 8 unidades (ver desde lejos)
+                </div>
+            </div>
+
+            <div class="game-world">
+                <div class="coordinate-grid"></div>
+                <div class="player" id="player4">🎮</div>
+                <div class="villain" id="villain4">🦹‍♂️</div>
+                <div class="detection-range" id="detection-range4"></div>
+                <div class="timer-display" id="timer4">Próximo disparo: 0.0s</div>
+                <div class="projectile-counter" id="counter4">Proyectiles: 0</div>
+            </div>
+
+            <div class="controls-section">
+                <div class="movement-controls">
+                    <h3>🎮 Mover Jugador</h3>
+                    <div class="control-grid">
+                        <div></div>
+                        <button class="control-btn" onclick="movePlayer4('up')">↑<br>W</button>
+                        <div></div>
+                        <button class="control-btn" onclick="movePlayer4('left')">←<br>A</button>
+                        <button class="control-btn" onclick="movePlayer4('down')">↓<br>S</button>
+                        <button class="control-btn" onclick="movePlayer4('right')">→<br>D</button>
+                        <button class="control-btn action-btn" onclick="resetDemo4()">🔄 Reset Demo</button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>📊 Estado del Villano</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Distancia al Jugador:</span>
+                        <span class="stat-value" id="distance4">0.0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">En Rango:</span>
+                        <span class="stat-value" id="in-range4">NO</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Estado:</span>
+                        <span class="stat-value" id="villain-state4">PACÍFICO</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Tiempo para Disparo:</span>
+                        <span class="stat-value" id="shoot-timer4">0.0s</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Proyectiles Activos:</span>
+                        <span class="stat-value" id="projectile-count4">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="villain-status peaceful" id="villain-status4">
+                🟢 VILLANO PACÍFICO - Jugador fuera de rango
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Inicialización del Sistema:</strong>
+                    <div class="code-explanation">
+Villano.prototype.initialize = function() {
+    // Referencias
+    this.<span class="variable-highlight">jugador</span> = null; // Referencia a Box
+    this.<span class="variable-highlight">proyectiles</span> = []; // Array de proyectiles activos
+    
+    // Configuración de detección
+    this.<span class="variable-highlight">rangoDeteccion</span> = 8; // Detecta al jugador a 8 unidades
+    this.<span class="variable-highlight">tiempoEntreDisparos</span> = 1.5; // Dispara cada 1.5 segundos
+    this.<span class="variable-highlight">tiempoUltimoDisparo</span> = 0;
+    this.<span class="variable-highlight">velocidadProyectil</span> = 6; // Velocidad del proyectil
+    
+    // Buscar al jugador (Box)
+    setTimeout(() => {
+        this.jugador = this.app.root.findByName('Box');
+        console.log("Villano encontró jugador:", this.jugador ? "SÍ" : "NO");
+    }, 100);
+};
+                </div>
+            </div>
+
+            <div style="background: rgba(255,193,7,0.1); border: 2px solid #FFC107; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3>📚 Conceptos de Programación Aprendidos</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div>
+                        <strong>🔧 Gestión de Objetos</strong>
+                        <ul style="font-size: 0.9em;">
+                            <li>Arrays dinámicos</li>
+                            <li>Creación/destrucción</li>
+                            <li>Referencias de objetos</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>🧮 Matemáticas 3D</strong>
+                        <ul style="font-size: 0.9em;">
+                            <li>Vectores unitarios</li>
+                            <li>Normalización</li>
+                            <li>Cálculo de distancias</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>🤖 Inteligencia Artificial</strong>
+                        <ul style="font-size: 0.9em;">
+                            <li>Máquinas de estado</li>
+                            <li>Toma de decisiones</li>
+                            <li>Comportamientos adaptativos</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>⚡ Optimización</strong>
+                        <ul style="font-size: 0.9em;">
+                            <li>Gestión de memoria</li>
+                            <li>Límites de rendimiento</li>
+                            <li>Limpieza automática</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(155,89,182,0.2); border: 2px solid #9b59b6; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <h3>🎓 ¡Felicitaciones por Completar el Curso!</h3>
+                <p style="font-size: 1.1em; margin: 15px 0;">Has aprendido a crear un sistema de juego completo y profesional que incluye:</p>
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin: 20px 0;">
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🎮</div>
+                        <strong>Movimiento de Jugador</strong>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">💥</div>
+                        <strong>Sistema de Colisiones</strong>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🎯</div>
+                        <strong>Proyectiles Inteligentes</strong>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🤖</div>
+                        <strong>IA Avanzada</strong>
+                    </div>
+                </div>
+                <p style="font-size: 1.2em; font-weight: bold; color: #ffd700;">¡Ahora puedes crear tus propios juegos profesionales en PlayCanvas!</p>
+            </div>
+
+            <div style="background: rgba(0,255,0,0.1); border: 2px solid #4CAF50; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3>🔗 Próximos Pasos</h3>
+                <p>Ahora que dominas estos conceptos avanzados, puedes:</p>
+                <ul>
+                    <li>🎮 <strong>Expandir el juego:</strong> Agregar múltiples villanos, power-ups, niveles</li>
+                    <li>🎨 <strong>Mejorar gráficos:</strong> Modelos 3D, texturas, efectos de partículas</li>
+                    <li>🎵 <strong>Añadir audio:</strong> Sonidos de disparo, música de fondo, efectos</li>
+                    <li>🏆 <strong>Sistema de puntuación:</strong> Puntos, vidas, achievements</li>
+                    <li>🌐 <strong>Multijugador:</strong> Conectar múltiples jugadores en tiempo real</li>
+                    <li>📱 <strong>Responsive:</strong> Adaptar para móviles y tablets</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estados globales para la demo
+        let gameState = {
+            playerX: 150, 
+            playerY: 200,
+            villainX: 450, 
+            villainY: 200,
+            villainState: 'DORMIDO',
+            shootTimer: 0,
+            projectiles: [],
+            totalShot: 0,
+            hits: 0,
+            expired: 0
+        };
+
+        const DETECTION_RANGE = 160; // píxeles (equivale a 8 unidades)
+        const SPEED = 20;
+        const PROJECTILE_SPEED = 120; // píxeles por segundo
+        const SHOOT_INTERVAL = 1.5; // segundos
+
+        // Función principal de actualización
+        function updateDemo() {
+            const player = document.getElementById('player4');
+            const villain = document.getElementById('villain4');
+            const detectionRange = document.getElementById('detection-range4');
+            const timer = document.getElementById('timer4');
+            const counter = document.getElementById('counter4');
+            const status = document.getElementById('villain-status4');
+
+            // Actualizar posiciones
+            player.style.left = gameState.playerX + 'px';
+            player.style.top = gameState.playerY + 'px';
+
+            // Calcular distancia
+            const dx = gameState.villainX - gameState.playerX;
+            const dy = gameState.villainY - gameState.playerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Actualizar rango de detección
+            detectionRange.style.left = (gameState.villainX - DETECTION_RANGE) + 'px';
+            detectionRange.style.top = (gameState.villainY - DETECTION_RANGE) + 'px';
+            detectionRange.style.width = (DETECTION_RANGE * 2) + 'px';
+            detectionRange.style.height = (DETECTION_RANGE * 2) + 'px';
+
+            // Determinar estado del villano
+            const inRange = distance < DETECTION_RANGE;
+            const newState = inRange ? 'ATACANDO' : 'PACÍFICO';
+            
+            if (newState !== gameState.villainState) {
+                gameState.villainState = newState;
+                gameState.shootTimer = 0;
+            }
+
+            // Actualizar apariencia del villano
+            if (gameState.villainState === 'ATACANDO') {
+                villain.classList.add('attacking');
+                status.className = 'villain-status attacking';
+                status.textContent = '🔴 VILLANO ATACANDO - Disparando proyectiles';
+            } else {
+                villain.classList.remove('attacking');
+                status.className = 'villain-status peaceful';
+                status.textContent = '🟢 VILLANO PACÍFICO - Jugador fuera de rango';
+            }
+
+            // Actualizar estadísticas
+            document.getElementById('distance4').textContent = (distance / 40).toFixed(1);
+            document.getElementById('in-range4').textContent = inRange ? 'SÍ' : 'NO';
+            document.getElementById('villain-state4').textContent = gameState.villainState;
+            document.getElementById('shoot-timer4').textContent = gameState.shootTimer.toFixed(1) + 's';
+            document.getElementById('projectile-count4').textContent = gameState.projectiles.length;
+
+            // Temporizador de disparo
+            if (gameState.villainState === 'ATACANDO') {
+                gameState.shootTimer += 0.016;
+                if (gameState.shootTimer >= SHOOT_INTERVAL) {
+                    createProjectile();
+                    gameState.shootTimer = 0;
+                }
+            }
+
+            timer.textContent = `Próximo disparo: ${Math.max(0, SHOOT_INTERVAL - gameState.shootTimer).toFixed(1)}s`;
+            counter.textContent = `Proyectiles: ${gameState.projectiles.length}`;
+
+            // Actualizar proyectiles
+            updateProjectiles();
+        }
+
+        function createProjectile() {
+            const dx = gameState.playerX - gameState.villainX;
+            const dy = gameState.playerY - gameState.villainY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            
+            const projectile = {
+                x: gameState.villainX,
+                y: gameState.villainY,
+                dirX: dx / length,
+                dirY: dy / length,
+                life: 5.0,
+                element: null
+            };
+
+            // Crear elemento visual
+            const projElement = document.createElement('div');
+            projElement.className = 'projectile';
+            projElement.style.left = projectile.x + 'px';
+            projElement.style.top = projectile.y + 'px';
+            document.querySelector('.game-world').appendChild(projElement);
+            
+            projectile.element = projElement;
+            gameState.projectiles.push(projectile);
+            gameState.totalShot++;
+        }
+
+        function updateProjectiles() {
+            for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                const proj = gameState.projectiles[i];
+                
+                // Mover proyectil
+                proj.x += proj.dirX * PROJECTILE_SPEED * 0.016;
+                proj.y += proj.dirY * PROJECTILE_SPEED * 0.016;
+                proj.life -= 0.016;
+
+                // Actualizar posición visual
+                proj.element.style.left = proj.x + 'px';
+                proj.element.style.top = proj.y + 'px';
+
+                // Verificar colisión con jugador
+                const dx = proj.x - gameState.playerX;
+                const dy = proj.y - gameState.playerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 25) {
+                    // Impacto
+                    hitPlayer();
+                    destroyProjectile(i);
+                    gameState.hits++;
+                } else if (proj.life <= 0 || proj.x < 0 || proj.x > 900 || proj.y < 0 || proj.y > 400) {
+                    // Expirado o fuera de límites
+                    destroyProjectile(i);
+                    gameState.expired++;
+                }
+            }
+        }
+
+        function hitPlayer() {
+            const player = document.getElementById('player4');
+            player.classList.add('hit-effect');
+            setTimeout(() => {
+                player.classList.remove('hit-effect');
+            }, 300);
+
+            // Crear efecto de impacto
+            const effect = document.createElement('div');
+            effect.className = 'impact-effect';
+            effect.style.left = (gameState.playerX - 20) + 'px';
+            effect.style.top = (gameState.playerY - 20) + 'px';
+            document.querySelector('.game-world').appendChild(effect);
+            
+            setTimeout(() => {
+                effect.remove();
+            }, 500);
+        }
+
+        function destroyProjectile(index) {
+            const proj = gameState.projectiles[index];
+            proj.element.remove();
+            gameState.projectiles.splice(index, 1);
+        }
+
+        function movePlayer4(direction) {
+            const canvas = document.querySelector('.game-world');
+            
+            switch(direction) {
+                case 'up':
+                    gameState.playerY = Math.max(20, gameState.playerY - SPEED);
+                    break;
+                case 'down':
+                    gameState.playerY = Math.min(360, gameState.playerY + SPEED);
+                    break;
+                case 'left':
+                    gameState.playerX = Math.max(20, gameState.playerX - SPEED);
+                    break;
+                case 'right':
+                    gameState.playerX = Math.min(canvas.offsetWidth - 60, gameState.playerX + SPEED);
+                    break;
+            }
+            updateDemo();
+        }
+
+        function resetDemo4() {
+            // Limpiar proyectiles
+            gameState.projectiles.forEach(proj => proj.element.remove());
+            gameState.projectiles = [];
+            
+            // Resetear posiciones y estadísticas
+            gameState.playerX = 150;
+            gameState.playerY = 200;
+            gameState.villainState = 'DORMIDO';
+            gameState.shootTimer = 0;
+            gameState.totalShot = 0;
+            gameState.hits = 0;
+            gameState.expired = 0;
+            
+            updateDemo();
+        }
+
+        // Inicializar demo
+        updateDemo();
+
+        // Loop principal
+        setInterval(() => {
+            updateDemo();
+        }, 16);
+
+        // Controles de teclado
+        document.addEventListener('keydown', (event) => {
+            switch(event.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    movePlayer4('up');
+                    break;
+                case 's':
+                case 'arrowdown':
+                    movePlayer4('down');
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    movePlayer4('left');
+                    break;
+                case 'd':
+                case 'arrowright':
+                    movePlayer4('right');
+                    break;
+                case 'r':
+                    resetDemo4();
+                    break;
+                case 'escape':
+                    resetDemo4();
+                    break;
+            }
+        });
+
+        // Mostrar instrucciones al cargar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                console.log(`
+🎯 INSTRUCCIONES DE LA DEMO:
+• Use WASD o flechas para mover al jugador
+• Acérquese al villano para activar el modo ataque
+• Observe cómo cambian los colores y estadísticas
+• Presione R o ESC para reiniciar
+• ¡Intente esquivar los proyectiles!
+                `);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Lógica Principal del Update:</strong>
+                    <div class="code-explanation">
+Villano.prototype.update = function(dt) {
+    if (!this.jugador) return;
+    
+    // Calcular distancia al jugador
+    var <span class="variable-highlight">distancia</span> = this.entity.getPosition().distance(this.jugador.getPosition());
+    
+    // Tomar decisión basada en la distancia
+    if (distancia <= this.<span class="variable-highlight">rangoDeteccion</span>) {
+        this.<span class="variable-highlight">modoAtaque(dt)</span>; // Jugador cerca → ATACAR
+    } else {
+        this.<span class="variable-highlight">modoNormal()</span>; // Jugador lejos → PACÍFICO
+    }
+    
+    // Siempre actualizar proyectiles existentes
+    this.<span class="variable-highlight">actualizarProyectiles(dt)</span>;
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Estados del Villano:</strong>
+                    <div class="code-explanation">
+// MODO ATAQUE: disparar proyectiles
+Villano.prototype.modoAtaque = function(dt) {
+    // Cambiar color a rojo (atacando)
+    this.<span class="variable-highlight">cambiarColorVillano(this.colorAtacando)</span>;
+    
+    // Incrementar timer
+    this.<span class="variable-highlight">tiempoUltimoDisparo += dt</span>;
+    
+    // Si es hora de disparar
+    if (this.tiempoUltimoDisparo >= this.tiempoEntreDisparos) {
+        this.<span class="variable-highlight">dispararProyectil()</span>;
+        this.tiempoUltimoDisparo = 0; // Reiniciar timer
+    }
+};
+
+// MODO NORMAL: sin atacar
+Villano.prototype.modoNormal = function() {
+    this.<span class="variable-highlight">cambiarColorVillano(this.colorNormal)</span>;
+};
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA LA DETECCIÓN:</strong> Mueve al jugador cerca y lejos del villano:
+                <ul>
+                    <li>🟡 El círculo amarillo muestra el rango de detección</li>
+                    <li>🔴 Cuando entras, el villano se vuelve rojo y empieza a atacar</li>
+                    <li>⏰ Observa el temporizador de disparo en la esquina</li>
+                    <li>🔵 Cuando sales, vuelve a azul (pacífico)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 2: CREACIÓN DE PROYECTILES -->
+        <div class="section">
+            <h2>🔫 PUNTO 2: Creación y Lanzamiento de Proyectiles</h2>
+
+            <div class="concept-box">
+                <h3>⚡ ¿Cómo se crean proyectiles dinámicamente?</h3>
+                <p>Los proyectiles son <strong>objetos que se crean durante el juego</strong>, no existen desde el inicio. Cada vez que el villano dispara:</p>
+                <ol>
+                    <li><strong>Crear una nueva entidad</strong> (esfera pequeña)</li>
+                    <li><strong>Posicionarla</strong> en la ubicación del villano</li>
+                    <li><strong>Calcular dirección</strong> hacia el jugador</li>
+                    <li><strong>Agregarla a la escena</strong> y al array de control</li>
+                </ol>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Crear un Nuevo Proyectil:</strong>
+                    <div class="code-explanation">
+Villano.prototype.dispararProyectil = function() {
+    console.log("💥 ¡Villano dispara!");
+    
+    // 1. Crear proyectil (esfera pequeña)
+    var <span class="variable-highlight">proyectil</span> = new pc.Entity('Proyectil');
+    
+    // 2. Agregar componentes al proyectil
+    proyectil.addComponent('render', {
+        type: <span class="variable-highlight">'sphere'</span>
+    });
+    
+    // 3. Hacer el proyectil más pequeño y rojo
+    proyectil.<span class="variable-highlight">setLocalScale(0.2, 0.2, 0.2)</span>;
+    
+    // 4. Material rojo brillante para el proyectil
+    var material = new pc.StandardMaterial();
+    material.diffuse.<span class="variable-highlight">set(1, 0.3, 0.3)</span>; // Rojo brillante
+    material.emissive.<span class="variable-highlight">set(0.2, 0, 0)</span>; // Un poco de brillo
+    material.update();
+    proyectil.render.meshInstances[0].material = material;
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Posicionamiento y Dirección:</strong>
+                    <div class="code-explanation">
+// 5. Posición inicial: desde el villano
+var <span class="variable-highlight">posVillano</span> = this.entity.getPosition();
+proyectil.<span class="variable-highlight">setPosition</span>(posVillano.x, posVillano.y + 0.5, posVillano.z);
+
+// 6. Calcular dirección hacia el jugador
+var <span class="variable-highlight">posJugador</span> = this.jugador.getPosition();
+var <span class="variable-highlight">direccion</span> = new pc.Vec3();
+direccion.x = posJugador.x - posVillano.x;
+direccion.z = posJugador.z - posVillano.z;
+direccion.<span class="variable-highlight">normalize()</span>; // Vector unitario
+
+// 7. Agregar a la escena
+this.app.root.<span class="variable-highlight">addChild(proyectil)</span>;
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Gestión en Array:</strong>
+                    <div class="code-explanation">
+// 8. Guardar datos del proyectil para control
+var <span class="variable-highlight">datosProyectil</span> = {
+    entidad: proyectil,
+    direccion: direccion,
+    tiempoVida: <span class="variable-highlight">5</span>, // El proyectil dura 5 segundos máximo
+    velocidad: this.velocidadProyectil
+};
+
+// 9. Agregarlo al array de proyectiles activos
+this.<span class="variable-highlight">proyectiles.push(datosProyectil)</span>;
+
+console.log("Proyectiles activos:", this.proyectiles.length);
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA LA CREACIÓN:</strong> Entra en el rango del villano y observa:
+                <ul>
+                    <li>🔴 Pequeñas esferas rojas aparecen desde el villano</li>
+                    <li>⏰ Se crean automáticamente cada 1.5 segundos</li>
+                    <li>📊 El contador muestra cuántos proyectiles hay activos</li>
+                    <li>🎯 Cada proyectil apunta hacia donde estabas cuando disparó</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- RESUMEN FINAL -->
+        <div class="section">
+            <h2>🎯 RESUMEN: Sistema Completo de Proyectiles</h2>
+
+            <div class="concept-box">
+                <h3>🏆 ¡Felicitaciones! Has Completado el Sistema Más Avanzado</h3>
+                <p>Ahora dominas todos los aspectos de un sistema de proyectiles profesional:</p>
+            </div>
+
+            <div style="background: rgba(0,255,0,0.1); border: 2px solid #4CAF50; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3>🚀 Código Final Completo para PlayCanvas</h3>
+                <p>Aquí tienes el código completo del script <code>villano.js</code> que implementa todo lo que aprendiste:</p>
+                
+                <div class="code-explanation">
+var Villano = pc.createScript('villano');
+
+Villano.prototype.initialize = function() {
+    // Referencias
+    this.jugador = null;
+    this.proyectiles = [];
+    
+    // Configuración de disparo
+    this.rangoDeteccion = 8;
+    this.tiempoEntreDisparos = 1.5;
+    this.tiempoUltimoDisparo = 0;
+    this.velocidadProyectil = 6;
+    this.maxProyectiles = 5;
+    
+    // Estados de la IA
+    this.estados = {
+        DORMIDO: 'dormido',
+        ALERTA: 'alerta', 
+        ATACANDO: 'atacando',
+        RASTREANDO: 'rastreando',
+        ENFRIAMIENTO: 'enfriamiento'
+    };
+    
+    this.estadoActual = this.estados.DORMIDO;
+    this.tiempoEnEstado = 0;
+    
+    // Colores por estado
+    this.colorNormal = new pc.Color(0.3, 0.3, 0.8);
+    this.colorAlerta = new pc.Color(1, 1, 0);
+    this.colorAtacando = new pc.Color(0.8, 0.2, 0.2);
+    this.colorRastreando = new pc.Color(1, 0.5, 0);
+    this.colorEnfriamiento = new pc.Color(0.5, 0.8, 1);
+    
+    // Estadísticas
+    this.proyectilesDisparados = 0;
+    this.proyectilesImpactados = 0;
+    
+    // Buscar al jugador
+    setTimeout(() => {
+        this.jugador = this.app.root.findByName('Box');
+        console.log("Villano encontró jugador:", this.jugador ? "SÍ" : "NO");
+    }, 100);
+    
+    this.cambiarColorVillano(this.colorNormal);
+};
+
+Villano.prototype.update = function(dt) {
+    if (!this.jugador) return;
+    
+    var distancia = this.entity.getPosition().distance(this.jugador.getPosition());
+    
+    // Actualizar máquina de estados
+    this.actualizarEstado(dt, distancia);
+    
+    // Ejecutar comportamiento del estado actual
+    this.ejecutarComportamiento(dt);
+    
+    // Actualizar proyectiles
+    this.actualizarProyectiles(dt);
+    
+    // Limpieza periódica
+    this.tiempoLimpieza = (this.tiempoLimpieza || 0) + dt;
+    if (this.tiempoLimpieza >= 2) {
+        this.limpiarProyectilesLejanos();
+        this.tiempoLimpieza = 0;
+    }
+};
+
+Villano.prototype.actualizarEstado = function(dt, distanciaJugador) {
+    this.tiempoEnEstado += dt;
+    
+    switch (this.estadoActual) {
+        case this.estados.DORMIDO:
+            if (distanciaJugador <= this.rangoDeteccion) {
+                this.cambiarEstado(this.estados.ALERTA);
+            }
+            break;
+            
+        case this.estados.ALERTA:
+            if (this.tiempoEnEstado >= 1.0) {
+                this.cambiarEstado(this.estados.ATACANDO);
+            } else if (distanciaJugador > this.rangoDeteccion) {
+                this.cambiarEstado(this.estados.DORMIDO);
+            }
+            break;
+            
+        case this.estados.ATACANDO:
+            if (distanciaJugador > this.rangoDeteccion) {
+                this.cambiarEstado(this.estados.RASTREANDO);
+            } else if (this.tiempoEnEstado >= 10) {
+                this.cambiarEstado(this.estados.ENFRIAMIENTO);
+            }
+            break;
+            
+        case this.estados.RASTREANDO:
+            if (distanciaJugador <= this.rangoDeteccion) {
+                this.cambiarEstado(this.estados.ATACANDO);
+            } else if (this.tiempoEnEstado >= 3.0) {
+                this.cambiarEstado(this.estados.DORMIDO);
+            }
+            break;
+            
+        case this.estados.ENFRIAMIENTO:
+            if (this.tiempoEnEstado >= 2.0) {
+                this.cambiarEstado(this.estados.DORMIDO);
+            }
+            break;
+    }
+};
+
+Villano.prototype.ejecutarComportamiento = function(dt) {
+    switch (this.estadoActual) {
+        case this.estados.DORMIDO:
+            this.cambiarColorVillano(this.colorNormal);
+            break;
+            
+        case this.estados.ALERTA:
+            this.cambiarColorVillano(this.colorAlerta);
+            break;
+            
+        case this.estados.ATACANDO:
+            this.cambiarColorVillano(this.colorAtacando);
+            this.tiempoEntreDisparos = 1.5;
+            this.modoAtaque(dt);
+            break;
+            
+        case this.estados.RASTREANDO:
+            this.cambiarColorVillano(this.colorRastreando);
+            this.tiempoEntreDisparos = 2.5;
+            this.modoAtaque(dt);
+            break;
+            
+        case this.estados.ENFRIAMIENTO:
+            this.cambiarColorVillano(this.colorEnfriamiento);
+            break;
+    }
+};
+
+Villano.prototype.modoAtaque = function(dt) {
+    this.tiempoUltimoDisparo += dt;
+    
+    if (this.tiempoUltimoDisparo >= this.tiempoEntreDisparos) {
+        this.dispararProyectil();
+        this.tiempoUltimoDisparo = 0;
+    }
+};
+
+Villano.prototype.dispararProyectil = function() {
+    if (this.proyectiles.length >= this.maxProyectiles) {
+        return;
+    }
+    
+    console.log("💥 ¡Villano dispara!");
+    
+    var proyectil = new pc.Entity('Proyectil');
+    proyectil.addComponent('render', { type: 'sphere' });
+    proyectil.setLocalScale(0.2, 0.2, 0.2);
+    
+    var material = new pc.StandardMaterial();
+    material.diffuse.set(1, 0.3, 0.3);
+    material.emissive.set(0.2, 0, 0);
+    material.update();
+    proyectil.render.meshInstances[0].material = material;
+    
+    var posVillano = this.entity.getPosition();
+    proyectil.setPosition(posVillano.x, posVillano.y + 0.5, posVillano.z);
+    
+    var posJugador = this.jugador.getPosition();
+    var direccion = new pc.Vec3();
+    direccion.x = posJugador.x - posVillano.x;
+    direccion.z = posJugador.z - posVillano.z;
+    direccion.normalize();
+    
+    this.app.root.addChild(proyectil);
+    
+    var datosProyectil = {
+        entidad: proyectil,
+        direccion: direccion,
+        tiempoVida: 5,
+        velocidad: this.velocidadProyectil
+    };
+    
+    this.proyectiles.push(datosProyectil);
+    this.proyectilesDisparados++;
+};
+
+Villano.prototype.actualizarProyectiles = function(dt) {
+    for (var i = this.proyectiles.length - 1; i >= 0; i--) {
+        var proj = this.proyectiles[i];
+        
+        proj.entidad.translate(
+            proj.direccion.x * proj.velocidad * dt,
+            0,
+            proj.direccion.z * proj.velocidad * dt
+        );
+        
+        proj.tiempoVida -= dt;
+        
+        var distanciaAJugador = proj.entidad.getPosition().distance(
+            this.jugador.getPosition()
+        );
+        
+        if (distanciaAJugador < 0.8) {
+            this.impactoEnJugador(proj);
+            this.destruirProyectil(i);
+        } else if (proj.tiempoVida <= 0) {
+            this.destruirProyectil(i);
+        }
+    }
+};
+
+Villano.prototype.impactoEnJugador = function(proyectil) {
+    console.log("💥 ¡Proyectil impactó al jugador!");
+    
+    this.proyectilesImpactados++;
+    
+    var materialJugador = this.jugador.render.meshInstances[0].material;
+    materialJugador.diffuse.set(1, 0, 0);
+    materialJugador.update();
+    
+    setTimeout(() => {
+        materialJugador.diffuse.set(0.7, 0.7, 0.7);
+        materialJugador.update();
+    }, 500);
+    
+    var direccionEmpuje = new pc.Vec3();
+    direccionEmpuje.copy(proyectil.direccion);
+    direccionEmpuje.scale(3);
+    
+    var posJugador = this.jugador.getPosition();
+    this.jugador.setPosition(
+        posJugador.x + direccionEmpuje.x,
+        posJugador.y,
+        posJugador.z + direccionEmpuje.z
+    );
+};
+
+Villano.prototype.destruirProyectil = function(indice) {
+    var proyectil = this.proyectiles[indice];
+    proyectil.entidad.destroy();
+    this.proyectiles.splice(indice, 1);
+};
+
+Villano.prototype.limpiarProyectilesLejanos = function() {
+    for (var i = this.proyectiles.length - 1; i >= 0; i--) {
+        var proj = this.proyectiles[i];
+        var pos = proj.entidad.getPosition();
+        var distanciaAlCentro = Math.sqrt(pos.x*pos.x + pos.z*pos.z);
+        
+        if (distanciaAlCentro > 20) {
+            this.destruirProyectil(i);
+        }
+    }
+};
+
+Villano.prototype.cambiarEstado = function(nuevoEstado) {
+    console.log("🔄 Villano:", this.estadoActual, "→", nuevoEstado);
+    this.estadoActual = nuevoEstado;
+    this.tiempoEnEstado = 0;
+};
+
+Villano.prototype.cambiarColorVillano = function(color) {
+    var material = this.entity.render.meshInstances[0].material;
+    material.diffuse.copy(color);
+    material.update();
+};
+
+Villano.prototype.obtenerEstadisticas = function() {
+    var precision = this.proyectilesDisparados > 0 ? 
+        (this.proyectilesImpactados / this.proyectilesDisparados) * 100 : 0;
+    
+    return {
+        disparados: this.proyectilesDisparados,
+        impactados: this.proyectilesImpactados,
+        activos: this.proyectiles.length,
+        precision: precision.toFixed(1) + "%",
+        estado: this.estadoActual
+    };
+};
