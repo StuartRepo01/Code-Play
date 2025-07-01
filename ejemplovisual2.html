@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Colisiones - Explicación Completa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .game-world {
+            width: 100%;
+            height: 400px;
+            background: #1a1a2e;
+            border: 3px solid #16213e;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .coordinate-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #888, #666);
+            border: 2px solid #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .villain {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, #4a90e2, #2171b5);
+            border: 2px solid #1565c0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .collision-range {
+            position: absolute;
+            border: 3px dashed rgba(255, 0, 0, 0.6);
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.1);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .distance-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, #ffd700, #ffeb3b);
+            pointer-events: none;
+            z-index: 8;
+            transform-origin: left center;
+            box-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+        }
+
+        .distance-label {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: #ffd700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 9;
+        }
+
+        .controls-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .movement-controls {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .control-btn.pressed {
+            background: linear-gradient(145deg, #ff6b6b, #ee5a24);
+            transform: scale(0.95);
+        }
+
+        .action-btn {
+            background: linear-gradient(145deg, #28a745, #20c997);
+            grid-column: 1 / 4;
+            margin-top: 10px;
+        }
+
+        .stats-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label {
+            color: #ccc;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .collision-status {
+            text-align: center;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .no-collision {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+
+        .in-collision {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #f44336;
+            color: #f44336;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+        }
+
+        .code-explanation {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            border-left: 4px solid #ff6b6b;
+            margin: 15px 0;
+        }
+
+        .variable-highlight {
+            background: rgba(255, 255, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .concept-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .math-example {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #FFC107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .step-by-step {
+            counter-reset: step-counter;
+        }
+
+        .step {
+            counter-increment: step-counter;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+            position: relative;
+        }
+
+        .step::before {
+            content: "Paso " counter(step-counter);
+            background: #ff6b6b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            top: -8px;
+            left: 15px;
+        }
+
+        .interactive-demo {
+            background: rgba(33, 150, 243, 0.1);
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .vector-display {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .bouncing {
+            animation: bounceBack 0.3s ease-out;
+        }
+
+        @keyframes bounceBack {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1) translateX(-5px); }
+            100% { transform: scale(1); }
+        }
+
+        .shaking {
+            animation: shake 0.1s ease-in-out infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        .collision-effect {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px solid #ff6b6b;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: collisionRipple 0.6s ease-out;
+            z-index: 15;
+        }
+
+        @keyframes collisionRipple {
+            0% {
+                transform: scale(0.3);
+                opacity: 1;
+                border-width: 6px;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+
+        .phase-indicator {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+
+        .phase {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .phase.active {
+            background: #ff6b6b;
+            color: white;
+            font-weight: bold;
+        }
+
+        .phase.inactive {
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💥 Parte 2: Sistema de Colisiones y Rebotes</h1>
+
+        <!-- INTRODUCCIÓN -->
+        <div class="section">
+            <h2>🎯 ¿Qué vamos a aprender?</h2>
+            <p>En esta parte veremos cómo detectar cuando dos objetos se tocan y cómo hacer que reboten de manera realista. Aprenderemos:</p>
+            <ul>
+                <li>📏 <strong>Cálculo de Distancias:</strong> Matemática para medir cercanía</li>
+                <li>💥 <strong>Detección de Colisión:</strong> Saber cuándo dos objetos se tocan</li>
+                <li>🏀 <strong>Física de Rebote:</strong> Calcular dirección y fuerza del rebote</li>
+                <li>🎨 <strong>Efectos Visuales:</strong> Cambios de color y animaciones</li>
+                <li>⏰ <strong>Control de Estados:</strong> Manejar antes/durante/después de la colisión</li>
+            </ul>
+
+            <div class="concept-box">
+                <h3>🔑 Concepto Clave: Detección de Colisión</h3>
+                <p>Una <strong>colisión</strong> ocurre cuando dos objetos están lo suficientemente cerca como para "tocarse". En nuestro juego:</p>
+                <ul>
+                    <li>🎮 <strong>Jugador:</strong> Cubo gris que puede moverse</li>
+                    <li>🦹‍♂️ <strong>Villano:</strong> Cubo azul fijo (por ahora)</li>
+                    <li>📏 <strong>Distancia límite:</strong> 1.5 unidades = colisión</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 1: CÁLCULO DE DISTANCIAS -->
+        <div class="section">
+            <h2>📏 PUNTO 1: Cálculo de Distancias en 3D</h2>
+
+            <div class="concept-box">
+                <h3>🧮 ¿Cómo se calcula la distancia entre dos puntos?</h3>
+                <p>Usamos el <strong>Teorema de Pitágoras en 3D</strong>:</p>
+                <div class="math-example">
+<strong>Fórmula:</strong>
+distancia = √[(x₂-x₁)² + (y₂-y₁)² + (z₂-z₁)²]
+
+<strong>Ejemplo:</strong>
+Jugador en (5, 2, 3)
+Villano en (8, 6, 1)
+
+Diferencias:
+• Δx = 8 - 5 = 3
+• Δy = 6 - 2 = 4  
+• Δz = 1 - 3 = -2
+
+Distancia = √(3² + 4² + (-2)²) = √(9 + 16 + 4) = √29 = 5.39 unidades
+                </div>
+            </div>
+
+            <div class="game-world">
+                <div class="coordinate-grid"></div>
+                <div class="player" id="player2">🎮</div>
+                <div class="villain" id="villain2">🦹‍♂️</div>
+                <div class="collision-range" id="collision-range2"></div>
+                <div class="distance-line" id="distance-line2"></div>
+                <div class="distance-label" id="distance-label2">Distancia: 0</div>
+            </div>
+
+            <div class="controls-section">
+                <div class="movement-controls">
+                    <h3>🎮 Mover Jugador</h3>
+                    <div class="control-grid">
+                        <div></div>
+                        <button class="control-btn" onclick="movePlayer2('up')">↑<br>W</button>
+                        <div></div>
+                        <button class="control-btn" onclick="movePlayer2('left')">←<br>A</button>
+                        <button class="control-btn" onclick="movePlayer2('down')">↓<br>S</button>
+                        <button class="control-btn" onclick="movePlayer2('right')">→<br>D</button>
+                        <button class="control-btn action-btn" onclick="resetPositions2()">🔄 Reset Posiciones</button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>📊 Cálculos en Tiempo Real</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Jugador X:</span>
+                        <span class="stat-value" id="player-x2">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Jugador Y:</span>
+                        <span class="stat-value" id="player-y2">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Villano X:</span>
+                        <span class="stat-value" id="villain-x2">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Villano Y:</span>
+                        <span class="stat-value" id="villain-y2">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Δx (diferencia):</span>
+                        <span class="stat-value" id="delta-x2">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Δy (diferencia):</span>
+                        <span class="stat-value" id="delta-y2">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Distancia:</span>
+                        <span class="stat-value" id="distance2">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Obtener Posiciones:</strong>
+                    <div class="code-explanation">
+var <span class="variable-highlight">posJugador</span> = this.entity.getPosition();
+var <span class="variable-highlight">posVillano</span> = this.otroObjeto.getPosition();
+
+console.log("Jugador:", posJugador.x, posJugador.y, posJugador.z);
+console.log("Villano:", posVillano.x, posVillano.y, posVillano.z);
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Calcular la Distancia:</strong>
+                    <div class="code-explanation">
+var <span class="variable-highlight">distancia</span> = posJugador.<span class="variable-highlight">distance</span>(posVillano);
+
+// Esto es equivalente a:
+var dx = posVillano.x - posJugador.x;
+var dy = posVillano.y - posJugador.y;
+var dz = posVillano.z - posJugador.z;
+var distancia = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Usar la Distancia:</strong>
+                    <div class="code-explanation">
+if (<span class="variable-highlight">distancia < 1.5</span>) {
+    console.log("¡COLISIÓN DETECTADA!");
+    // Activar efectos de colisión
+} else {
+    console.log("Sin colisión, distancia:", distancia);
+}
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA ESTO:</strong> Mueve al jugador (🎮) hacia el villano (🦹‍♂️) y observa:
+                <ul>
+                    <li>📏 La línea amarilla muestra la distancia visualmente</li>
+                    <li>🔴 El círculo rojo marca el rango de colisión (1.5 unidades)</li>
+                    <li>📊 Los números cambian en tiempo real</li>
+                    <li>🧮 Puedes verificar la fórmula matemática manualmente</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 2: DETECCIÓN DE COLISIÓN -->
+        <div class="section">
+            <h2>💥 PUNTO 2: Detección de Colisión en Tiempo Real</h2>
+
+            <div class="concept-box">
+                <h3>🎯 Estados de Colisión</h3>
+                <p>La detección de colisión tiene <strong>tres estados importantes</strong>:</p>
+                <ul>
+                    <li><strong>🟢 SIN COLISIÓN:</strong> Objetos separados (distancia > 1.5)</li>
+                    <li><strong>🔴 INICIO DE COLISIÓN:</strong> Primer momento en que se tocan</li>
+                    <li><strong>🟡 EN COLISIÓN:</strong> Manteniéndose tocados</li>
+                    <li><strong>🔵 FIN DE COLISIÓN:</strong> Se separan otra vez</li>
+                </ul>
+            </div>
+
+            <div class="phase-indicator">
+                <div class="phase inactive" id="phase-no-collision">🟢 Sin Colisión</div>
+                <div class="phase inactive" id="phase-collision-start">🔴 Inicio Colisión</div>
+                <div class="phase inactive" id="phase-in-collision">🟡 En Colisión</div>
+                <div class="phase inactive" id="phase-collision-end">🔵 Fin Colisión</div>
+            </div>
+
+            <div class="collision-status no-collision" id="collision-status2">
+                🟢 SIN COLISIÓN - Distancia: <span id="status-distance">0</span>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Variables de Control:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.initialize = function() {
+    this.<span class="variable-highlight">distanciaColision</span> = 1.5;    // Límite de colisión
+    this.<span class="variable-highlight">enColision</span> = false;         // ¿Está tocando ahora?
+    this.<span class="variable-highlight">otroObjeto</span> = null;          // Referencia al villano
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Lógica de Detección:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.detectarColision = function() {
+    if (!this.otroObjeto) return; // Verificar que existe el villano
+    
+    var <span class="variable-highlight">distancia</span> = this.entity.getPosition().distance(
+        this.otroObjeto.getPosition()
+    );
+    
+    // 🔴 DETECTAR INICIO DE COLISIÓN
+    if (distancia < this.distanciaColision && <span class="variable-highlight">!this.enColision</span>) {
+        this.enColision = true;
+        console.log("¡CHOQUE! Iniciando colisión");
+        this.iniciarColision();
+    }
+    
+    // 🔵 DETECTAR FIN DE COLISIÓN  
+    if (distancia >= this.distanciaColision && <span class="variable-highlight">this.enColision</span>) {
+        this.enColision = false;
+        console.log("Se separaron");
+        this.terminarColision();
+    }
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>¿Por qué usar la variable `enColision`?</strong>
+                    <div class="concept-box">
+                        <p><strong>Sin la variable:</strong> El código se ejecutaría 60 veces por segundo mientras estén tocándose.</p>
+                        <p><strong>Con la variable:</strong> Solo se ejecuta UNA vez al inicio y UNA vez al final.</p>
+                        
+                        <div class="math-example">
+<strong>Ejemplo sin control:</strong>
+Frame 1: distancia = 1.2 → ¡COLISIÓN! (ejecuta efectos)
+Frame 2: distancia = 1.1 → ¡COLISIÓN! (ejecuta efectos otra vez)
+Frame 3: distancia = 1.0 → ¡COLISIÓN! (ejecuta efectos otra vez)
+...60 veces por segundo = CAOS
+
+<strong>Ejemplo con control:</strong>
+Frame 1: distancia = 1.2 && !enColision → ¡COLISIÓN! (ejecuta efectos, enColision = true)
+Frame 2: distancia = 1.1 && enColision → No hace nada (ya sabía que estaba en colisión)
+Frame 3: distancia = 1.0 && enColision → No hace nada
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO 3: FÍSICA DE REBOTE -->
+        <div class="section">
+            <h2>🏀 PUNTO 3: Cálculo de la Física de Rebote</h2>
+
+            <div class="concept-box">
+                <h3>🎯 ¿Cómo funciona un rebote realista?</h3>
+                <p>Cuando dos objetos chocan, el objeto que se mueve debe:</p>
+                <ol>
+                    <li><strong>📐 Calcular dirección:</strong> ¿Hacia dónde debe rebotar?</li>
+                    <li><strong>⚡ Aplicar fuerza:</strong> ¿Con qué intensidad?</li>
+                    <li><strong>⏰ Duración:</strong> ¿Por cuánto tiempo?</li>
+                </ol>
+            </div>
+
+            <div class="game-world">
+                <div class="coordinate-grid"></div>
+                <div class="player" id="player3">🎮</div>
+                <div class="villain" id="villain3">🦹‍♂️</div>
+                <div class="collision-range" id="collision-range3"></div>
+                
+                <!-- Vector de rebote -->
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 12;">
+                    <defs>
+                        <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b" />
+                        </marker>
+                    </defs>
+                    <line id="bounce-vector" x1="0" y1="0" x2="0" y2="0" 
+                          stroke="#ff6b6b" stroke-width="4" marker-end="url(#arrowhead2)" 
+                          style="display: none;" />
+                </svg>
+            </div>
+
+            <div class="controls-section">
+                <div class="movement-controls">
+                    <h3>🎮 Controles</h3>
+                    <div class="control-grid">
+                        <div></div>
+                        <button class="control-btn" onclick="movePlayer3('up')">↑<br>W</button>
+                        <div></div>
+                        <button class="control-btn" onclick="movePlayer3('left')">←<br>A</button>
+                        <button class="control-btn" onclick="movePlayer3('down')">↓<br>S</button>
+                        <button class="control-btn" onclick="movePlayer3('right')">→<br>D</button>
+                        <button class="control-btn action-btn" onclick="resetPositions3()">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>📊 Rebote en Tiempo Real</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Distancia:</span>
+                        <span class="stat-value" id="distance3">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">En Colisión:</span>
+                        <span class="stat-value" id="collision3">NO</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Tiempo Rebote:</span>
+                        <span class="stat-value" id="bounce-time3">0.0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Dirección X:</span>
+                        <span class="stat-value" id="bounce-dir-x">0.0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Dirección Z:</span>
+                        <span class="stat-value" id="bounce-dir-z">0.0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Fuerza:</span>
+                        <span class="stat-value">3.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vector-display" id="vector-info3">
+                <strong>🧮 Cálculo del Vector de Rebote:</strong><br>
+                Diferencia X: <span id="calc-dx">0</span> | Diferencia Z: <span id="calc-dz">0</span><br>
+                Vector sin normalizar: (<span id="calc-raw-x">0</span>, <span id="calc-raw-z">0</span>)<br>
+                Vector normalizado: (<span id="calc-norm-x">0.0</span>, <span id="calc-norm-z">0.0</span>)
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Calcular Dirección del Rebote:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.calcularRebote = function() {
+    var <span class="variable-highlight">posJugador</span> = this.entity.getPosition();
+    var <span class="variable-highlight">posVillano</span> = this.otroObjeto.getPosition();
+    
+    // Calcular diferencias (del villano hacia el jugador)
+    this.direccionRebote.x = <span class="variable-highlight">posJugador.x - posVillano.x</span>;
+    this.direccionRebote.z = <span class="variable-highlight">posJugador.z - posVillano.z</span>;
+    
+    // Normalizar el vector para que tenga longitud 1
+    this.direccionRebote.<span class="variable-highlight">normalize()</span>;
+    
+    // Activar rebote por 0.3 segundos
+    this.<span class="variable-highlight">tiempoRebote</span> = this.duracionRebote;
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>¿Qué significa "Normalizar"?</strong>
+                    <div class="concept-box">
+                        <p><strong>Normalizar</strong> significa convertir un vector a longitud 1, manteniendo su dirección.</p>
+                        
+                        <div class="math-example">
+<strong>Ejemplo:</strong>
+Jugador en (8, 6), Villano en (5, 2)
+direccionRebote.x = 8 - 5 = 3
+direccionRebote.z = 6 - 2 = 4
+Vector original: (3, 4)
+
+Longitud = √(3² + 4²) = √(9 + 16) = √25 = 5
+
+Vector normalizado:
+x = 3 ÷ 5 = 0.6
+z = 4 ÷ 5 = 0.8
+Resultado: (0.6, 0.8) con longitud = 1
+
+<strong>¿Por qué normalizar?</strong>
+• Rebote consistente sin importar la distancia
+• Control preciso de la fuerza
+• Matemática más limpia
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Aplicar el Rebote:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // Si está rebotando, aplicar movimiento automático
+    if (this.<span class="variable-highlight">tiempoRebote > 0</span>) {
+        // Mover en la dirección calculada
+        this.entity.translate(
+            this.direccionRebote.x * <span class="variable-highlight">this.fuerzaRebote * dt</span>,
+            0,
+            this.direccionRebote.z * <span class="variable-highlight">this.fuerzaRebote * dt</span>
+        );
+        
+        // Reducir tiempo restante
+        this.<span class="variable-highlight">tiempoRebote -= dt</span>;
+        
+        // No permitir movimiento manual durante rebote
+        return; 
+    }
+    
+    // Movimiento normal solo si NO está rebotando
+    // ... código de movimiento WASD ...
+};
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA EL REBOTE:</strong> Mueve al jugador hasta tocar al villano y observa:
+                <ul>
+                    <li>🎯 La flecha roja muestra la dirección calculada del rebote</li>
+                    <li>🏀 El jugador es empujado automáticamente hacia atrás</li>
+                    <li>⏰ El rebote dura exactamente 0.3 segundos</li>
+                    <li>🚫 No puedes controlar al jugador durante el rebote</li>
+                    <li>📊 Observa cómo se calcula el vector paso a paso</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 4: EFECTOS VISUALES -->
+        <div class="section">
+            <h2>🎨 PUNTO 4: Efectos Visuales de Colisión</h2>
+
+            <div class="concept-box">
+                <h3>🌟 ¿Por qué son importantes los efectos visuales?</h3>
+                <p>Los efectos visuales dan <strong>feedback inmediato</strong> al jugador sobre lo que está pasando en el juego. Sin ellos, las colisiones serían invisibles e confusas.</p>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Cambio de Color del Jugador:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.cambiarColor = function(r, g, b) {
+    var <span class="variable-highlight">material</span> = this.entity.render.meshInstances[0].material;
+    material.diffuse.<span class="variable-highlight">set(r, g, b)</span>;
+    material.<span class="variable-highlight">update()</span>;
+};
+
+// Uso en colisión:
+this.cambiarColor(<span class="variable-highlight">1, 0, 0</span>); // Rojo durante colisión
+this.cambiarColor(<span class="variable-highlight">0.7, 0.7, 0.7</span>); // Gris normal
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Cambio de Color del Villano:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.cambiarColorOtro = function(r, g, b) {
+    if (!this.otroObjeto) return;
+    
+    var <span class="variable-highlight">material</span> = this.otroObjeto.render.meshInstances[0].material;
+    material.diffuse.<span class="variable-highlight">set(r, g, b)</span>;
+    material.<span class="variable-highlight">update()</span>;
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Efecto de Temblor:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.efectoImpacto = function() {
+    if (!this.otroObjeto) return;
+    
+    // Guardar posición original
+    var <span class="variable-highlight">posOriginal</span> = this.otroObjeto.getPosition().clone();
+    var <span class="variable-highlight">tiempoTemblor</span> = 0.1; // 100 milisegundos
+    
+    var temblor = setInterval(() => {
+        if (tiempoTemblor <= 0) {
+            clearInterval(temblor);
+            // Restaurar posición original
+            this.otroObjeto.setPosition(posOriginal);
+            return;
+        }
+        
+        // Mover aleatoriamente
+        var offsetX = (Math.random() - 0.5) * <span class="variable-highlight">0.1</span>;
+        var offsetZ = (Math.random() - 0.5) * <span class="variable-highlight">0.1</span>;
+        
+        this.otroObjeto.setPosition(
+            posOriginal.x + offsetX,
+            posOriginal.y,
+            posOriginal.z + offsetZ
+        );
+        
+        tiempoTemblor -= 0.016; // ~60 FPS
+    }, 16);
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Secuencia Completa de Efectos:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.iniciarColision = function() {
+    console.log("¡CHOQUE! Box rebota");
+    
+    // 1. Calcular física
+    this.<span class="variable-highlight">calcularRebote()</span>;
+    
+    // 2. Efectos visuales
+    this.<span class="variable-highlight">cambiarColor(1, 0, 0)</span>;        // Jugador → rojo
+    this.<span class="variable-highlight">cambiarColorOtro(1, 0, 0)</span>;    // Villano → rojo
+    this.<span class="variable-highlight">efectoImpacto()</span>;               // Villano tiembla
+    
+    // 3. Sonido (si tuviéramos audio)
+    // this.reproducirSonidoChoque();
+};
+
+Movimiento.prototype.terminarColision = function() {
+    console.log("Se separaron");
+    
+    // Restaurar colores normales
+    this.<span class="variable-highlight">cambiarColor(0.7, 0.7, 0.7)</span>;     // Jugador → gris
+    this.<span class="variable-highlight">cambiarColorOtro(0.7, 0.7, 0.7)</span>; // Villano → gris
+};
+                    </div>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>🎨 Paleta de Colores del Juego</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;">
+                    <div style="background: rgba(0.7*255, 0.7*255, 0.7*255, 0.3); padding: 10px; border-radius: 6px; color: white;">
+                        <strong>Jugador Normal</strong><br>
+                        RGB: (0.7, 0.7, 0.7)<br>
+                        Color: Gris claro
+                    </div>
+                    <div style="background: rgba(255, 0, 0, 0.3); padding: 10px; border-radius: 6px; color: white;">
+                        <strong>En Colisión</strong><br>
+                        RGB: (1.0, 0.0, 0.0)<br>
+                        Color: Rojo intenso
+                    </div>
+                    <div style="background: rgba(74, 144, 226, 0.3); padding: 10px; border-radius: 6px; color: white;">
+                        <strong>Villano Normal</strong><br>
+                        RGB: (0.3, 0.3, 0.8)<br>
+                        Color: Azul oscuro
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO 5: CONTROL DE ESTADOS -->
+        <div class="section">
+            <h2>⏰ PUNTO 5: Control de Estados y Temporizadores</h2>
+
+            <div class="concept-box">
+                <h3>🎯 Máquina de Estados de Colisión</h3>
+                <p>El sistema debe manejar diferentes estados y transiciones entre ellos:</p>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px; text-align: center; margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <div style="background: #4CAF50; padding: 15px; border-radius: 8px; margin: 5px; min-width: 150px;">
+                        <strong>🟢 NORMAL</strong><br>
+                        <small>enColision = false</small><br>
+                        <small>tiempoRebote = 0</small><br>
+                        <small>Color: Gris</small>
+                    </div>
+                    <span style="font-size: 24px;">➡️</span>
+                    <div style="background: #ff6b6b; padding: 15px; border-radius: 8px; margin: 5px; min-width: 150px;">
+                        <strong>🔴 COLISIÓN</strong><br>
+                        <small>enColision = true</small><br>
+                        <small>tiempoRebote = 0.3</small><br>
+                        <small>Color: Rojo</small>
+                    </div>
+                    <span style="font-size: 24px;">➡️</span>
+                    <div style="background: #FF9800; padding: 15px; border-radius: 8px; margin: 5px; min-width: 150px;">
+                        <strong>🟠 REBOTANDO</strong><br>
+                        <small>tiempoRebote > 0</small><br>
+                        <small>Movimiento automático</small><br>
+                        <small>Sin control manual</small>
+                    </div>
+                    <span style="font-size: 24px;">➡️</span>
+                    <div style="background: #4CAF50; padding: 15px; border-radius: 8px; margin: 5px; min-width: 150px;">
+                        <strong>🟢 NORMAL</strong><br>
+                        <small>Ciclo completo</small><br>
+                        <small>Control restaurado</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Variables de Control de Tiempo:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.initialize = function() {
+    // Control de rebote
+    this.<span class="variable-highlight">fuerzaRebote</span> = 3;           // Qué tan fuerte rebota
+    this.<span class="variable-highlight">tiempoRebote</span> = 0;          // Tiempo restante rebotando
+    this.<span class="variable-highlight">duracionRebote</span> = 0.3;      // Duración total del rebote
+    this.<span class="variable-highlight">direccionRebote</span> = new pc.Vec3(); // Hacia dónde rebotar
+    
+    // Control de colisión
+    this.<span class="variable-highlight">enColision</span> = false;        // ¿Está tocando ahora?
+    this.<span class="variable-highlight">distanciaColision</span> = 1.5;   // Límite de colisión
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Lógica del Update Completa:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    var input = this.app.keyboard;
+    
+    // 🏀 SI ESTÁ REBOTANDO: movimiento automático
+    if (this.<span class="variable-highlight">tiempoRebote > 0</span>) {
+        this.entity.translate(
+            this.direccionRebote.x * this.fuerzaRebote * dt,
+            0,
+            this.direccionRebote.z * this.fuerzaRebote * dt
+        );
+        this.<span class="variable-highlight">tiempoRebote -= dt</span>;
+        return; // No permitir control manual
+    }
+    
+    // 🎮 MOVIMIENTO NORMAL (solo si NO rebota)
+    if (input.isPressed(pc.KEY_W)) {
+        this.entity.translate(0, 0, -this.speed * dt);
+    }
+    // ... resto de controles ...
+    
+    // 🚀 SALTO (solo si NO rebota)
+    if (input.wasPressed(pc.KEY_SPACE) && this.isGrounded) {
+        this.entity.translate(0, this.jumpForce * dt, 0);
+        this.isGrounded = false;
+    }
+    
+    // 🌍 GRAVEDAD (solo si NO rebota)
+    if (!this.isGrounded) {
+        this.entity.translate(0, -10 * dt, 0);
+        if (this.entity.getPosition().y <= 0.5) {
+            this.entity.setPosition(/* ... */);
+            this.isGrounded = true;
+        }
+    }
+    
+    // 💥 DETECTAR COLISIONES (siempre)
+    this.<span class="variable-highlight">detectarColision()</span>;
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Ejemplo de Temporización:</strong>
+                    <div class="math-example">
+<strong>Rebote a 60 FPS (dt = 0.016):</strong>
+
+Frame 1: tiempoRebote = 0.300, se mueve, queda 0.284
+Frame 2: tiempoRebote = 0.284, se mueve, queda 0.268  
+Frame 3: tiempoRebote = 0.268, se mueve, queda 0.252
+...
+Frame 18: tiempoRebote = 0.016, se mueve, queda 0.000
+Frame 19: tiempoRebote = 0.000, ¡YA NO rebota!
+
+<strong>Total: 18 frames × 0.016 = ~0.3 segundos exactos</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESUMEN FINAL -->
+        <div class="section">
+            <h2>🎯 RESUMEN: Sistema Completo de Colisiones</h2>
+
+            <div class="interactive-demo">
+                <h3>🎮 DEMO FINAL - Prueba Todo el Sistema</h3>
+                <p>Usa los controles de cualquiera de las demos de arriba y observa cómo todos los sistemas trabajan juntos:</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                        <strong>📏 Cálculo de Distancia</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Teorema de Pitágoras 3D</li>
+                            <li>Actualización en tiempo real</li>
+                            <li>Visualización con línea amarilla</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                        <strong>💥 Detección de Colisión</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Estados inicio/durante/fin</li>
+                            <li>Variable de control enColision</li>
+                            <li>Ejecución una sola vez</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                        <strong>🏀 Física de Rebote</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Cálculo de dirección</li>
+                            <li>Normalización de vectores</li>
+                            <li>Fuerza y duración controladas</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                        <strong>🎨 Efectos Visuales</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Cambios de color instantáneos</li>
+                            <li>Efecto de temblor</li>
+                            <li>Feedback visual claro</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: rgba(0,255,0,0.1); border: 2px solid #4CAF50; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3>🚀 ¿Listo para la Parte 3?</h3>
+                    <p>En la siguiente parte aprenderemos el sistema más avanzado:</p>
+                    <h4>🎯 Parte 3: Sistema de Proyectiles del Villano</h4>
+                    <ul>
+                        <li>🎯 <strong>Detección de Rango:</strong> El villano detecta al jugador</li>
+                        <li>🔫 <strong>Creación de Proyectiles:</strong> Disparar esferas hacia el jugador</li>
+                        <li>📐 <strong>Cálculo de Trayectorias:</strong> Apuntar donde está el jugador</li>
+                        <li>💥 <strong>Impactos:</strong> Detectar cuando el proyectil toca al jugador</li>
+                        <li>🎨 <strong>Estados del Villano:</strong> Pacífico vs Atacando</li>
+                        <li>⏰ <strong>Temporizadores:</strong> Disparar cada X segundos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estados de los demos
+        let demoState = {
+            demo2: {
+                playerX: 150, playerY: 180,
+                villainX: 350, villainY: 180
+            },
+            demo3: {
+                playerX: 150, playerY: 180,
+                villainX: 350, villainY: 180,
+                inCollision: false,
+                bounceTime: 0,
+                bounceDirection: { x: 0, z: 0 }
+            }
+        };
+
+        const COLLISION_DISTANCE = 60; // píxeles (equivale a 1.5 unidades)
+        const SPEED = 20;
+        const BOUNCE_FORCE = 40;
+        const BOUNCE_DURATION = 0.3;
+
+        // DEMO 2: Cálculo de distancias
+        function updateDemo2() {
+            const player = document.getElementById('player2');
+            const villain = document.getElementById('villain2');
+            const collisionRange = document.getElementById('collision-range2');
+            const distanceLine = document.getElementById('distance-line2');
+            const distanceLabel = document.getElementById('distance-label2');
+
+            // Actualizar posiciones visuales
+            player.style.left = demoState.demo2.playerX + 'px';
+            player.style.top = demoState.demo2.playerY + 'px';
+
+            // Calcular distancia
+            const dx = demoState.demo2.villainX - demoState.demo2.playerX;
+            const dy = demoState.demo2.villainY - demoState.demo2.playerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Actualizar rango de colisión
+            collisionRange.style.left = (demoState.demo2.villainX - COLLISION_DISTANCE) + 'px';
+            collisionRange.style.top = (demoState.demo2.villainY - COLLISION_DISTANCE) + 'px';
+            collisionRange.style.width = (COLLISION_DISTANCE * 2) + 'px';
+            collisionRange.style.height = (COLLISION_DISTANCE * 2) + 'px';
+
+            // Línea de distancia
+            const angle = Math.atan2(dy, dx);
+            const lineLength = distance;
+            distanceLine.style.left = (demoState.demo2.playerX + 20) + 'px';
+            distanceLine.style.top = (demoState.demo2.playerY + 20) + 'px';
+            distanceLine.style.width = lineLength + 'px';
+            distanceLine.style.transform = `rotate(${angle}rad)`;
+
+            // Etiqueta de distancia
+            const midX = demoState.demo2.playerX + (dx / 2);
+            const midY = demoState.demo2.playerY + (dy / 2);
+            distanceLabel.style.left = midX + 'px';
+            distanceLabel.style.top = (midY - 10) + 'px';
+            distanceLabel.textContent = `Distancia: ${(distance / 40).toFixed(2)}`;
+
+            // Actualizar estadísticas
+            document.getElementById('player-x2').textContent = Math.round(demoState.demo2.playerX / 40);
+            document.getElementById('player-y2').textContent = Math.round((400 - demoState.demo2.playerY) / 40);
+            document.getElementById('villain-x2').textContent = Math.round(demoState.demo2.villainX / 40);
+            document.getElementById('villain-y2').textContent = Math.round((400 - demoState.demo2.villainY) / 40);
+            document.getElementById('delta-x2').textContent = Math.round(dx / 40);
+            document.getElementById('delta-y2').textContent = Math.round(-dy / 40);
+            document.getElementById('distance2').textContent = (distance / 40).toFixed(2);
+
+            // Actualizar estado de fase
+            updatePhaseIndicator(distance < COLLISION_DISTANCE);
+        }
+
+        function movePlayer2(direction) {
+            const canvas = document.querySelector('.game-world');
+            
+            switch(direction) {
+                case 'up':
+                    demoState.demo2.playerY = Math.max(20, demoState.demo2.playerY - SPEED);
+                    break;
+                case 'down':
+                    demoState.demo2.playerY = Math.min(360, demoState.demo2.playerY + SPEED);
+                    break;
+                case 'left':
+                    demoState.demo2.playerX = Math.max(20, demoState.demo2.playerX - SPEED);
+                    break;
+                case 'right':
+                    demoState.demo2.playerX = Math.min(canvas.offsetWidth - 60, demoState.demo2.playerX + SPEED);
+                    break;
+            }
+            updateDemo2();
+        }
+
+        function resetPositions2() {
+            demoState.demo2.playerX = 150;
+            demoState.demo2.playerY = 180;
+            updateDemo2();
+        }
+
+        function updatePhaseIndicator(inCollision) {
+            const phases = ['phase-no-collision', 'phase-collision-start', 'phase-in-collision', 'phase-collision-end'];
+            phases.forEach(id => {
+                document.getElementById(id).className = 'phase inactive';
+            });
+
+            if (inCollision) {
+                document.getElementById('phase-in-collision').className = 'phase active';
+                document.getElementById('collision-status2').className = 'collision-status in-collision';
+                document.getElementById('collision-status2').innerHTML = `🔴 EN COLISIÓN - Distancia: <span id="status-distance">${(Math.sqrt(Math.pow(demoState.demo2.villainX - demoState.demo2.playerX, 2) + Math.pow(demoState.demo2.villainY - demoState.demo2.playerY, 2)) / 40).toFixed(2)}</span>`;
+            } else {
+                document.getElementById('phase-no-collision').className = 'phase active';
+                document.getElementById('collision-status2').className = 'collision-status no-collision';
+                document.getElementById('collision-status2').innerHTML = `🟢 SIN COLISIÓN - Distancia: <span id="status-distance">${(Math.sqrt(Math.pow(demoState.demo2.villainX - demoState.demo2.playerX, 2) + Math.pow(demoState.demo2.villainY - demoState.demo2.playerY, 2)) / 40).toFixed(2)}</span>`;
+            }
+        }
+
+        // DEMO 3: Rebote
+        function updateDemo3() {
+            const player = document.getElementById('player3');
+            const villain = document.getElementById('villain3');
+            const collisionRange = document.getElementById('collision-range3');
+            const bounceVector = document.getElementById('bounce-vector');
+
+            // Actualizar posiciones
+            player.style.left = demoState.demo3.playerX + 'px';
+            player.style.top = demoState.demo3.playerY + 'px';
+
+            // Calcular distancia
+            const dx = demoState.demo3.villainX - demoState.demo3.playerX;
+            const dy = demoState.demo3.villainY - demoState.demo3.playerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Actualizar rango de colisión
+            collisionRange.style.left = (demoState.demo3.villainX - COLLISION_DISTANCE) + 'px';
+            collisionRange.style.top = (demoState.demo3.villainY - COLLISION_DISTANCE) + 'px';
+            collisionRange.style.width = (COLLISION_DISTANCE * 2) + 'px';
+            collisionRange.style.height = (COLLISION_DISTANCE * 2) + 'px';
+
+            // Detectar colisión
+            const wasInCollision = demoState.demo3.inCollision;
+            const isInCollision = distance < COLLISION_DISTANCE && demoState.demo3.bounceTime <= 0;
+            
+            if (isInCollision && !wasInCollision) {
+                startCollision3();
+            } else if (!isInCollision && wasInCollision && demoState.demo3.bounceTime <= 0) {
+                endCollision3();
+            }
+
+            // Actualizar estadísticas
+            document.getElementById('distance3').textContent = (distance / 40).toFixed(2);
+            document.getElementById('collision3').textContent = demoState.demo3.inCollision ? 'SÍ' : 'NO';
+            document.getElementById('bounce-time3').textContent = Math.max(0, demoState.demo3.bounceTime).toFixed(2);
+            document.getElementById('bounce-dir-x').textContent = demoState.demo3.bounceDirection.x.toFixed(2);
+            document.getElementById('bounce-dir-z').textContent = demoState.demo3.bounceDirection.z.toFixed(2);
+
+            // Actualizar cálculos del vector
+            const rawDx = demoState.demo3.playerX - demoState.demo3.villainX;
+            const rawDy = demoState.demo3.playerY - demoState.demo3.villainY;
+            const length = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+            const normX = length > 0 ? rawDx / length : 0;
+            const normY = length > 0 ? rawDy / length : 0;
+
+            document.getElementById('calc-dx').textContent = Math.round(rawDx / 40);
+            document.getElementById('calc-dz').textContent = Math.round(-rawDy / 40);
+            document.getElementById('calc-raw-x').textContent = (rawDx / 40).toFixed(1);
+            document.getElementById('calc-raw-z').textContent = (-rawDy / 40).toFixed(1);
+            document.getElementById('calc-norm-x').textContent = normX.toFixed(3);
+            document.getElementById('calc-norm-z').textContent = (-normY).toFixed(3);
+
+            // Mostrar vector de rebote si está rebotando
+            if (demoState.demo3.bounceTime > 0) {
+                const startX = demoState.demo3.playerX + 20;
+                const startY = demoState.demo3.playerY + 20;
+                const endX = startX + (demoState.demo3.bounceDirection.x * 60);
+                const endY = startY + (demoState.demo3.bounceDirection.z * 60);
+
+                bounceVector.setAttribute('x1', startX);
+                bounceVector.setAttribute('y1', startY);
+                bounceVector.setAttribute('x2', endX);
+                bounceVector.setAttribute('y2', endY);
+                bounceVector.style.display = 'block';
+            } else {
+                bounceVector.style.display = 'none';
+            }
+        }
+
+        function startCollision3() {
+            console.log("¡CHOQUE DETECTADO!");
+            demoState.demo3.inCollision = true;
+            demoState.demo3.bounceTime = BOUNCE_DURATION;
+
+            // Calcular dirección de rebote
+            const dx = demoState.demo3.playerX - demoState.demo3.villainX;
+            const dy = demoState.demo3.playerY - demoState.demo3.villainY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            
+            if (length > 0) {
+                demoState.demo3.bounceDirection.x = dx / length;
+                demoState.demo3.bounceDirection.z = dy / length;
+            }
+
+            // Efectos visuales
+            document.getElementById('player3').style.background = 'linear-gradient(145deg, #ff0000, #cc0000)';
+            document.getElementById('villain3').style.background = 'linear-gradient(145deg, #ff0000, #cc0000)';
+            document.getElementById('villain3').classList.add('shaking');
+
+            // Crear efecto de ondas
+            createCollisionEffect(demoState.demo3.playerX + 20, demoState.demo3.playerY + 20);
+
+            // Iniciar rebote
+            startBounce3();
+        }
+
+        function startBounce3() {
+            const bounceInterval = setInterval(() => {
+                if (demoState.demo3.bounceTime <= 0) {
+                    clearInterval(bounceInterval);
+                    return;
+                }
+
+                // Aplicar movimiento de rebote
+                const moveX = demoState.demo3.bounceDirection.x * BOUNCE_FORCE * 0.016;
+                const moveY = demoState.demo3.bounceDirection.z * BOUNCE_FORCE * 0.016;
+
+                demoState.demo3.playerX += moveX;
+                demoState.demo3.playerY += moveY;
+
+                // Mantener dentro de límites
+                demoState.demo3.playerX = Math.max(20, Math.min(800 - 60, demoState.demo3.playerX));
+                demoState.demo3.playerY = Math.max(20, Math.min(360, demoState.demo3.playerY));
+
+                demoState.demo3.bounceTime -= 0.016;
+                updateDemo3();
+            }, 16);
+        }
+
+        function endCollision3() {
+            console.log("Colisión terminada");
+            demoState.demo3.inCollision = false;
+
+            // Restaurar colores
+            document.getElementById('player3').style.background = 'linear-gradient(145deg, #888, #666)';
+            document.getElementById('villain3').style.background = 'linear-gradient(145deg, #4a90e2, #2171b5)';
+            document.getElementById('villain3').classList.remove('shaking');
+        }
+
+        function createCollisionEffect(x, y) {
+            const effect = document.createElement('div');
+            effect.className = 'collision-effect';
+            effect.style.left = (x - 30) + 'px';
+            effect.style.top = (y - 30) + 'px';
+            
+            document.querySelector('.game-world').appendChild(effect);
+            
+            setTimeout(() => {
+                effect.remove();
+            }, 600);
+        }
+
+        function movePlayer3(direction) {
+            // No permitir movimiento durante rebote
+            if (demoState.demo3.bounceTime > 0) return;
+
+            const canvas = document.querySelector('.game-world');
+            
+            switch(direction) {
+                case 'up':
+                    demoState.demo3.playerY = Math.max(20, demoState.demo3.playerY - SPEED);
+                    break;
+                case 'down':
+                    demoState.demo3.playerY = Math.min(360, demoState.demo3.playerY + SPEED);
+                    break;
+                case 'left':
+                    demoState.demo3.playerX = Math.max(20, demoState.demo3.playerX - SPEED);
+                    break;
+                case 'right':
+                    demoState.demo3.playerX = Math.min(canvas.offsetWidth - 60, demoState.demo3.playerX + SPEED);
+                    break;
+            }
+            updateDemo3();
+        }
+
+        function resetPositions3() {
+            demoState.demo3.playerX = 150;
+            demoState.demo3.playerY = 180;
+            demoState.demo3.inCollision = false;
+            demoState.demo3.bounceTime = 0;
+            demoState.demo3.bounceDirection = { x: 0, z: 0 };
+            
+            // Restaurar colores
+            document.getElementById('player3').style.background = 'linear-gradient(145deg, #888, #666)';
+            document.getElementById('villain3').style.background = 'linear-gradient(145deg, #4a90e2, #2171b5)';
+            document.getElementById('villain3').classList.remove('shaking');
+            
+            updateDemo3();
+        }
+
+        // Controles de teclado para todas las demos
+        document.addEventListener('keydown', (event) => {
+            switch(event.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    movePlayer2('up');
+                    movePlayer3('up');
+                    break;
+                case 's':
+                case 'arrowdown':
+                    movePlayer2('down');
+                    movePlayer3('down');
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    movePlayer2('left');
+                    movePlayer3('left');
+                    break;
+                case 'd':
+                case 'arrowright':
+                    movePlayer2('right');
+                    movePlayer3('right');
+                    break;
+                case 'r':
+                    resetPositions2();
+                    resetPositions3();
+                    break;
+            }
+        });
+
+        // Inicializar demos
+        updateDemo2();
+        updateDemo3();
+
+        // Actualización continua para el demo 3 (rebote)
+        setInterval(() => {
+            if (demoState.demo3.bounceTime > 0) {
+                updateDemo3();
+            }
+        }, 16);
+    </script>
+</body>
+</html>
