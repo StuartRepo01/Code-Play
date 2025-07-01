@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimiento del Jugador - Explicación Completa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .game-world {
+            width: 100%;
+            height: 400px;
+            background: #1a1a2e;
+            border: 3px solid #16213e;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .coordinate-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .axis-labels {
+            position: absolute;
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .x-axis { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .y-axis { top: 50%; left: 10px; transform: translateY(-50%) rotate(-90deg); }
+        .z-axis { top: 10px; left: 50%; transform: translateX(-50%); }
+
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #888, #666);
+            border: 2px solid #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            left: 200px;
+            top: 180px;
+            z-index: 10;
+        }
+
+        .ground-indicator {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(76, 175, 80, 0.2);
+            border-top: 2px dashed #4CAF50;
+        }
+
+        .ground-label {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .controls-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .movement-controls {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+            background: linear-gradient(145deg, #764ba2, #667eea);
+        }
+
+        .control-btn.pressed {
+            background: linear-gradient(145deg, #ff6b6b, #ee5a24);
+            transform: scale(0.95);
+        }
+
+        .jump-btn {
+            grid-column: 1 / 4;
+            background: linear-gradient(145deg, #ff6b6b, #ee5a24);
+        }
+
+        .stats-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label {
+            color: #ccc;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .code-explanation {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+            margin: 15px 0;
+        }
+
+        .variable-highlight {
+            background: rgba(255, 255, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .concept-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .math-example {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .warning-box {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #FFC107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .interactive-demo {
+            background: rgba(33, 150, 243, 0.1);
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .step-by-step {
+            counter-reset: step-counter;
+        }
+
+        .step {
+            counter-increment: step-counter;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            position: relative;
+        }
+
+        .step::before {
+            content: "Paso " counter(step-counter);
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            top: -8px;
+            left: 15px;
+        }
+
+        .coordinate-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-20px); }
+            60% { transform: translateY(-10px); }
+        }
+
+        .jumping {
+            animation: bounce 0.5s ease;
+        }
+
+        .grounded {
+            filter: drop-shadow(0 4px 6px rgba(76, 175, 80, 0.4));
+        }
+
+        .airborne {
+            filter: drop-shadow(0 8px 12px rgba(255, 193, 7, 0.4));
+        }
+
+        .delta-time-viz {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .frame-box {
+            width: 30px;
+            height: 20px;
+            background: #667eea;
+            border: 1px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+        }
+
+        .movement-vector {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .vector-arrow {
+            stroke: #ff6b6b;
+            stroke-width: 3;
+            marker-end: url(#arrowhead);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏃‍♂️ Parte 1: Sistema de Movimiento - Explicación Completa</h1>
+
+        <!-- PUNTO 1: COORDENADAS Y POSICIONAMIENTO -->
+        <div class="section">
+            <h2>📍 PUNTO 1: Coordenadas y Posicionamiento en 3D</h2>
+            
+            <div class="concept-box">
+                <h3>🌐 ¿Qué son las coordenadas 3D?</h3>
+                <p>En un videojuego 3D, cada objeto tiene una posición definida por <strong>tres números</strong>:</p>
+                <ul>
+                    <li><strong>X:</strong> Izquierda ← → Derecha</li>
+                    <li><strong>Y:</strong> Abajo ↓ ↑ Arriba</li>
+                    <li><strong>Z:</strong> Atrás ← → Adelante</li>
+                </ul>
+            </div>
+
+            <div class="game-world">
+                <div class="coordinate-grid"></div>
+                <div class="axis-labels x-axis">← X (Izquierda/Derecha) →</div>
+                <div class="axis-labels y-axis">↑ Y (Arriba/Abajo) ↓</div>
+                <div class="axis-labels z-axis">← Z (Atrás/Adelante) →</div>
+                <div class="player" id="player">🎮</div>
+                <div class="coordinate-display" id="coordinates">
+                    X: <span id="coord-x">20</span><br>
+                    Y: <span id="coord-y">18</span><br>
+                    Z: <span id="coord-z">0</span>
+                </div>
+                <div class="ground-indicator">
+                    <div class="ground-label">SUELO (Y = 0.5)</div>
+                </div>
+                
+                <svg class="movement-vector" id="movement-vector" width="100%" height="100%">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b" />
+                        </marker>
+                    </defs>
+                    <line class="vector-arrow" id="vector-line" x1="0" y1="0" x2="0" y2="0" style="display: none;" />
+                </svg>
+            </div>
+
+            <div class="math-example">
+<strong>🧮 Ejemplo de Coordenadas:</strong>
+• Jugador en posición (20, 18, 0) significa:
+  - 20 unidades hacia la derecha
+  - 18 unidades hacia arriba 
+  - 0 unidades hacia adelante/atrás
+
+• Si se mueve hacia la derecha: (21, 18, 0)
+• Si salta: (20, 22, 0)
+• Si va hacia adelante: (20, 18, -5)
+            </div>
+
+            <div class="code-explanation">
+// En PlayCanvas, las direcciones son:
+var posicion = this.entity.getPosition();
+console.log("X:", posicion.x);  // Izquierda(-) / Derecha(+)
+console.log("Y:", posicion.y);  // Abajo(-) / Arriba(+)  
+console.log("Z:", posicion.z);  // Adelante(-) / Atrás(+)
+
+// Cambiar posición:
+this.entity.setPosition(x, y, z);
+            </div>
+        </div>
+
+        <!-- PUNTO 2: CONTROLES BÁSICOS -->
+        <div class="section">
+            <h2>🎮 PUNTO 2: Controles Básicos WASD</h2>
+
+            <div class="controls-section">
+                <div class="movement-controls">
+                    <h3>🎮 Controles de Movimiento</h3>
+                    <div class="control-grid">
+                        <div></div>
+                        <button class="control-btn" id="btn-w" onclick="movePlayer('up')" title="Mover hacia adelante">
+                            ↑<br>W
+                        </button>
+                        <div></div>
+                        
+                        <button class="control-btn" id="btn-a" onclick="movePlayer('left')" title="Mover hacia la izquierda">
+                            ←<br>A
+                        </button>
+                        <button class="control-btn" id="btn-s" onclick="movePlayer('down')" title="Mover hacia atrás">
+                            ↓<br>S
+                        </button>
+                        <button class="control-btn" id="btn-d" onclick="movePlayer('right')" title="Mover hacia la derecha">
+                            →<br>D
+                        </button>
+                        
+                        <button class="control-btn jump-btn" id="btn-space" onclick="jumpPlayer()" title="Saltar">
+                            🦘 SPACE (Saltar)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>📊 Estado en Tiempo Real</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Posición X:</span>
+                        <span class="stat-value" id="pos-x">20</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Posición Y:</span>
+                        <span class="stat-value" id="pos-y">18</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Velocidad:</span>
+                        <span class="stat-value">5 unidades/seg</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">En el Suelo:</span>
+                        <span class="stat-value" id="grounded">SÍ</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Última Tecla:</span>
+                        <span class="stat-value" id="last-key">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Detección de Teclas:</strong>
+                    <div class="code-explanation">
+var input = this.app.keyboard;
+if (input.<span class="variable-highlight">isPressed</span>(pc.KEY_W)) {
+    // La tecla W está siendo presionada AHORA
+    console.log("¡Moviendo hacia adelante!");
+}
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Mapeo de Direcciones:</strong>
+                    <div class="code-explanation">
+// W = Adelante  → Z negativo
+if (input.isPressed(pc.KEY_W)) {
+    this.entity.<span class="variable-highlight">translate</span>(0, 0, <span class="variable-highlight">-this.speed * dt</span>);
+}
+
+// S = Atrás     → Z positivo  
+if (input.isPressed(pc.KEY_S)) {
+    this.entity.<span class="variable-highlight">translate</span>(0, 0, <span class="variable-highlight">+this.speed * dt</span>);
+}
+
+// A = Izquierda → X negativo
+if (input.isPressed(pc.KEY_A)) {
+    this.entity.<span class="variable-highlight">translate</span>(<span class="variable-highlight">-this.speed * dt</span>, 0, 0);
+}
+
+// D = Derecha   → X positivo
+if (input.isPressed(pc.KEY_D)) {
+    this.entity.<span class="variable-highlight">translate</span>(<span class="variable-highlight">+this.speed * dt</span>, 0, 0);
+}
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Función translate():</strong>
+                    <div class="concept-box">
+                        <p><code>translate(x, y, z)</code> significa "muévete X unidades en cada dirección"</p>
+                        <ul>
+                            <li><code>translate(5, 0, 0)</code> = Mover 5 unidades a la derecha</li>
+                            <li><code>translate(0, 3, 0)</code> = Mover 3 unidades hacia arriba</li>
+                            <li><code>translate(0, 0, -2)</code> = Mover 2 unidades hacia adelante</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA ESTO:</strong> Usa los botones de arriba y observa cómo cada tecla cambia diferentes coordenadas. ¡Mira el vector rojo que muestra la dirección del movimiento!
+            </div>
+        </div>
+
+        <!-- PUNTO 3: DELTA TIME -->
+        <div class="section">
+            <h2>⏱️ PUNTO 3: Delta Time - La Clave del Movimiento Suave</h2>
+
+            <div class="concept-box">
+                <h3>🤔 ¿Qué es Delta Time?</h3>
+                <p><strong>Delta Time (dt)</strong> es el tiempo que pasó desde el último frame. Es fundamental para que el movimiento sea <strong>consistente</strong> sin importar el FPS del juego.</p>
+            </div>
+
+            <div class="warning-box">
+                <h4>⚠️ Problema sin Delta Time:</h4>
+                <ul>
+                    <li>PC rápido (120 FPS): Jugador se mueve súper rápido</li>
+                    <li>PC lento (30 FPS): Jugador se mueve súper lento</li>
+                    <li>Juego injugable en diferentes computadoras</li>
+                </ul>
+            </div>
+
+            <div class="math-example">
+<strong>🧮 Cálculos de Delta Time:</strong>
+
+<strong>A 60 FPS:</strong>
+• 1 segundo ÷ 60 frames = 0.016 segundos por frame
+• dt = 0.016
+• Movimiento por frame = 5 × 0.016 = 0.08 unidades
+
+<strong>A 30 FPS:</strong>
+• 1 segundo ÷ 30 frames = 0.033 segundos por frame  
+• dt = 0.033
+• Movimiento por frame = 5 × 0.033 = 0.165 unidades
+
+<strong>Resultado:</strong> ¡En ambos casos se mueve 5 unidades por SEGUNDO!
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Sin Delta Time (❌ MAL):</strong>
+                    <div class="code-explanation">
+// ❌ Esto está MAL - movimiento inconsistente
+if (input.isPressed(pc.KEY_W)) {
+    this.entity.translate(0, 0, <span style="background: rgba(255,0,0,0.3);">-5</span>); // Siempre 5 unidades
+}
+// Resultado: Rápido en PC lento, súper rápido en PC rápido
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Con Delta Time (✅ BIEN):</strong>
+                    <div class="code-explanation">
+// ✅ Esto está BIEN - movimiento consistente
+if (input.isPressed(pc.KEY_W)) {
+    this.entity.translate(0, 0, <span class="variable-highlight">-this.speed * dt</span>);
+}
+// Resultado: Siempre 5 unidades por SEGUNDO, sin importar el FPS
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Visualización de Frames:</strong>
+                    <div class="delta-time-viz">
+                        <div class="frame-box">F1</div>
+                        <div class="frame-box">F2</div>
+                        <div class="frame-box">F3</div>
+                        <div class="frame-box">F4</div>
+                        <span>= 1 segundo a 60 FPS</span>
+                    </div>
+                    <p>Cada frame dura 0.016 segundos. En cada frame, el jugador se mueve <code>speed × 0.016</code> unidades.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO 4: MECÁNICA DE SALTO -->
+        <div class="section">
+            <h2>🦘 PUNTO 4: Mecánica de Salto y Gravedad</h2>
+
+            <div class="concept-box">
+                <h3>🎯 ¿Cómo funciona el salto realista?</h3>
+                <p>Un salto realista tiene <strong>3 fases</strong>:</p>
+                <ol>
+                    <li><strong>Impulso inicial:</strong> Empujar hacia arriba con fuerza</li>
+                    <li><strong>Ascenso:</strong> Subir hasta perder velocidad</li>
+                    <li><strong>Caída:</strong> Gravedad tira hacia abajo hasta tocar suelo</li>
+                </ol>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Detección del Salto:</strong>
+                    <div class="code-explanation">
+if (input.<span class="variable-highlight">wasPressed</span>(pc.KEY_SPACE) && this.<span class="variable-highlight">isGrounded</span>) {
+    // Solo saltar si: 1) Se presionó SPACE, 2) Está en el suelo
+    this.entity.translate(0, <span class="variable-highlight">this.jumpForce * dt</span>, 0);
+    this.<span class="variable-highlight">isGrounded = false</span>; // Ya no está en el suelo
+}
+                    </div>
+                    
+                    <div class="concept-box">
+                        <strong>🔑 Diferencia Crucial:</strong>
+                        <ul>
+                            <li><strong>isPressed:</strong> ¿Está presionada? (se ejecuta cada frame mientras esté presionada)</li>
+                            <li><strong>wasPressed:</strong> ¿Se presionó JUSTO AHORA? (solo se ejecuta 1 frame)</li>
+                        </ul>
+                        <p>Para salto usamos <code>wasPressed</code> para saltar solo UNA vez por clic.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Aplicar Gravedad:</strong>
+                    <div class="code-explanation">
+if (!this.isGrounded) {
+    // Si está en el aire, aplicar gravedad (caer hacia abajo)
+    this.entity.translate(0, <span class="variable-highlight">-10 * dt</span>, 0);
+    
+    // Verificar si llegó al suelo
+    if (this.entity.getPosition().y <= 0.5) {
+        // Forzar posición exacta del suelo
+        var pos = this.entity.getPosition();
+        this.entity.setPosition(pos.x, <span class="variable-highlight">0.5</span>, pos.z);
+        this.<span class="variable-highlight">isGrounded = true</span>; // Ya puede saltar otra vez
+    }
+}
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Variables de Control:</strong>
+                    <div class="code-explanation">
+this.<span class="variable-highlight">jumpForce</span> = 8;        // Fuerza inicial del salto
+this.<span class="variable-highlight">isGrounded</span> = true;   // ¿Puede saltar?
+var <span class="variable-highlight">gravity</span> = -10;        // Fuerza de gravedad (negativa = hacia abajo)
+var <span class="variable-highlight">groundLevel</span> = 0.5;    // Altura del suelo
+                    </div>
+                </div>
+            </div>
+
+            <div class="math-example">
+<strong>🧮 Física del Salto:</strong>
+
+<strong>Impulso inicial:</strong>
+• jumpForce = 8 unidades/segundo hacia arriba
+• Primer frame: 8 × 0.016 = 0.128 unidades de altura
+
+<strong>Gravedad constante:</strong>
+• gravity = -10 unidades/segundo² hacia abajo  
+• Cada frame: -10 × 0.016 = -0.16 unidades hacia abajo
+
+<strong>Trayectoria del salto:</strong>
+Frame 1: +0.128 (impulso) - 0.16 (gravedad) = -0.032 ↓
+Frame 2: 0 (sin impulso) - 0.16 (gravedad) = -0.16 ↓  
+Frame 3: 0 - 0.16 = -0.16 ↓ (acelera hacia abajo)
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA EL SALTO:</strong> Haz clic en el botón de SPACE (🦘) y observa:
+                <ul>
+                    <li>Solo funciona cuando está en el suelo</li>
+                    <li>El jugador cambia de color mientras está en el aire</li>
+                    <li>"En el Suelo" cambia a "NO" durante el salto</li>
+                    <li>Al aterrizar, vuelve automáticamente al estado normal</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 5: VARIABLES DE ESTADO -->
+        <div class="section">
+            <h2>🔧 PUNTO 5: Variables de Estado del Jugador</h2>
+
+            <div class="concept-box">
+                <h3>📊 ¿Qué son las Variables de Estado?</h3>
+                <p>Son <strong>datos</strong> que guardan información sobre el jugador en cada momento del juego. Como la "memoria" del personaje.</p>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Inicialización de Variables:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.initialize = function() {
+    // Variables de movimiento
+    this.<span class="variable-highlight">speed</span> = 5;              // Velocidad en unidades/segundo
+    this.<span class="variable-highlight">jumpForce</span> = 8;         // Fuerza del salto hacia arriba
+    
+    // Variables de estado
+    this.<span class="variable-highlight">isGrounded</span> = true;     // ¿Está en el suelo?
+    this.<span class="variable-highlight">isJumping</span> = false;     // ¿Está saltando?
+    
+    // Variables de posición (automáticas)
+    // this.entity.x, this.entity.y, this.entity.z
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Uso de Variables en el Update:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // Leer estado actual
+    var pos = this.entity.getPosition();
+    var input = this.app.keyboard;
+    
+    // Tomar decisiones basadas en el estado
+    if (this.<span class="variable-highlight">isGrounded</span> && input.wasPressed(pc.KEY_SPACE)) {
+        this.<span class="variable-highlight">isJumping</span> = true;
+        this.<span class="variable-highlight">isGrounded</span> = false;
+    }
+    
+    // Actualizar estado
+    if (pos.y <= 0.5) {
+        this.<span class="variable-highlight">isGrounded</span> = true;
+        this.<span class="variable-highlight">isJumping</span> = false;
+    }
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Estado Completo del Jugador:</strong>
+                    <div class="stats-panel" style="background: rgba(0,0,0,0.5); margin: 15px 0;">
+                        <div class="stat-item">
+                            <span class="stat-label">🎯 speed:</span>
+                            <span class="stat-value">5.0</span>
+                            <span style="color: #aaa; margin-left: 10px;">unidades por segundo</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">🦘 jumpForce:</span>
+                            <span class="stat-value">8.0</span>
+                            <span style="color: #aaa; margin-left: 10px;">impulso inicial</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">🌍 isGrounded:</span>
+                            <span class="stat-value" id="var-grounded">true</span>
+                            <span style="color: #aaa; margin-left: 10px;">¿puede saltar?</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">📍 position.x:</span>
+                            <span class="stat-value" id="var-pos-x">20.0</span>
+                            <span style="color: #aaa; margin-left: 10px;">izquierda/derecha</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">📍 position.y:</span>
+                            <span class="stat-value" id="var-pos-y">0.5</span>
+                            <span style="color: #aaa; margin-left: 10px;">altura</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">📍 position.z:</span>
+                            <span class="stat-value" id="var-pos-z">0.0</span>
+                            <span style="color: #aaa; margin-left: 10px;">adelante/atrás</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Flujo de Estados (Máquina de Estados):</strong>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="display: inline-block; background: #4CAF50; padding: 10px; border-radius: 6px; margin: 5px;">
+                            <strong>EN SUELO</strong><br>
+                            <small>isGrounded = true</small><br>
+                            <small>Puede: mover, saltar</small>
+                        </div>
+                        <span style="font-size: 24px; margin: 0 10px;">➡️</span>
+                        <div style="display: inline-block; background: #FF9800; padding: 10px; border-radius: 6px; margin: 5px;">
+                            <strong>SALTANDO</strong><br>
+                            <small>isGrounded = false</small><br>
+                            <small>Puede: mover (no saltar)</small>
+                        </div>
+                        <span style="font-size: 24px; margin: 0 10px;">➡️</span>
+                        <div style="display: inline-block; background: #4CAF50; padding: 10px; border-radius: 6px; margin: 5px;">
+                            <strong>EN SUELO</strong><br>
+                            <small>isGrounded = true</small><br>
+                            <small>Ciclo completo</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="math-example">
+<strong>🧮 Ejemplo de Cambio de Estado:</strong>
+
+<strong>Estado Inicial:</strong>
+• isGrounded = true, position.y = 0.5
+• Jugador presiona SPACE
+
+<strong>Frame 1 (Salto):</strong>
+• isGrounded = false, position.y = 0.5 + (8 × 0.016) = 0.628
+• Variable cambia: puede moverse pero NO puede saltar
+
+<strong>Frame 2-10 (En el aire):</strong>
+• position.y va subiendo, luego bajando por gravedad
+• isGrounded sigue siendo false
+
+<strong>Frame 11 (Aterrizaje):</strong>
+• position.y <= 0.5 detectado
+• isGrounded = true automáticamente
+• ¡Ya puede saltar otra vez!
+            </div>
+        </div>
+
+        <!-- RESUMEN FINAL -->
+        <div class="section">
+            <h2>🎯 RESUMEN: Todo Funcionando Juntos</h2>
+
+            <div class="concept-box">
+                <h3>🔥 El Ciclo Completo del Update</h3>
+                <p>Cada frame (60 veces por segundo), el juego ejecuta esta secuencia:</p>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>1. Leer Entrada del Usuario:</strong>
+                    <div class="code-explanation">
+var input = this.app.keyboard;
+// ¿Qué teclas está presionando el jugador?
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>2. Verificar Estado Actual:</strong>
+                    <div class="code-explanation">
+var pos = this.entity.getPosition();
+// ¿Dónde está el jugador? ¿Puede saltar?
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>3. Aplicar Movimiento:</strong>
+                    <div class="code-explanation">
+if (input.isPressed(pc.KEY_W)) {
+    this.entity.translate(0, 0, -this.speed * dt);
+}
+// Mover según las teclas presionadas
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>4. Aplicar Física:</strong>
+                    <div class="code-explanation">
+if (!this.isGrounded) {
+    this.entity.translate(0, -10 * dt, 0); // Gravedad
+}
+// Simular efectos físicos
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>5. Actualizar Estado:</strong>
+                    <div class="code-explanation">
+if (pos.y <= 0.5) {
+    this.isGrounded = true;
+}
+// Actualizar variables para el próximo frame
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎮 DEMO FINAL - Prueba Todo:</strong>
+                <p>Usa todos los controles y observa cómo cada sistema trabaja en conjunto:</p>
+                <ul>
+                    <li>🎯 <strong>Movimiento WASD:</strong> Coordenadas X/Z cambian suavemente</li>
+                    <li>⏱️ <strong>Delta Time:</strong> Movimiento consistente sin importar el rendimiento</li>
+                    <li>🦘 <strong>Salto:</strong> Solo funciona en el suelo, gravedad realista</li>
+                    <li>📊 <strong>Estados:</strong> Variables se actualizan automáticamente</li>
+                    <li>🎨 <strong>Feedback Visual:</strong> Colores y efectos muestran el estado</li>
+                </ul>
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <strong>🚀 ¿Listo para la Parte 2?</strong><br>
+                    En la siguiente parte aprenderemos: <strong>💥 Detección de Colisiones y Rebotes</strong>
+                    <ul>
+                        <li>🎯 Cálculo de distancias entre objetos</li>
+                        <li>💥 Detección de colisiones en tiempo real</li>
+                        <li>🏀 Física de rebote realista</li>
+                        <li>🎨 Efectos visuales de impacto</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado del jugador
+        let playerState = {
+            x: 200,
+            y: 180,
+            isGrounded: true,
+            isJumping: false,
+            lastKey: null
+        };
+
+        const GROUND_LEVEL = 340; // Nivel del suelo en píxeles (400 - 60)
+        const SPEED = 25; // Píxeles por movimiento
+        const JUMP_HEIGHT = 60; // Altura del salto en píxeles
+
+        function updatePlayerDisplay() {
+            const player = document.getElementById('player');
+            player.style.left = playerState.x + 'px';
+            player.style.top = playerState.y + 'px';
+            
+            // Actualizar coordenadas del mundo 3D
+            const worldX = Math.round(playerState.x / 10);
+            const worldY = Math.round((400 - playerState.y) / 10);
+            const worldZ = 0; // Fijo en esta demo 2D
+            
+            // Actualizar displays de coordenadas
+            document.getElementById('coord-x').textContent = worldX;
+            document.getElementById('coord-y').textContent = worldY;
+            document.getElementById('coord-z').textContent = worldZ;
+            
+            // Actualizar estadísticas
+            document.getElementById('pos-x').textContent = worldX;
+            document.getElementById('pos-y').textContent = worldY;
+            document.getElementById('grounded').textContent = playerState.isGrounded ? 'SÍ' : 'NO';
+            document.getElementById('last-key').textContent = playerState.lastKey || '-';
+            
+            // Variables de estado
+            document.getElementById('var-grounded').textContent = playerState.isGrounded;
+            document.getElementById('var-pos-x').textContent = worldX + '.0';
+            document.getElementById('var-pos-y').textContent = playerState.isGrounded ? '0.5' : (worldY / 10).toFixed(1);
+            document.getElementById('var-pos-z').textContent = '0.0';
+            
+            // Efectos visuales
+            if (playerState.isGrounded) {
+                player.classList.add('grounded');
+                player.classList.remove('airborne');
+            } else {
+                player.classList.add('airborne');
+                player.classList.remove('grounded');
+            }
+        }
+
+        function showMovementVector(direction) {
+            const vector = document.getElementById('vector-line');
+            const playerRect = document.getElementById('player').getBoundingClientRect();
+            const canvasRect = document.querySelector('.game-world').getBoundingClientRect();
+            
+            const startX = playerState.x + 20; // Centro del jugador
+            const startY = playerState.y + 20;
+            
+            let endX = startX, endY = startY;
+            
+            switch(direction) {
+                case 'up': endY = startY - 40; break;
+                case 'down': endY = startY + 40; break;
+                case 'left': endX = startX - 40; break;
+                case 'right': endX = startX + 40; break;
+            }
+            
+            vector.setAttribute('x1', startX);
+            vector.setAttribute('y1', startY);
+            vector.setAttribute('x2', endX);
+            vector.setAttribute('y2', endY);
+            vector.style.display = 'block';
+            
+            setTimeout(() => {
+                vector.style.display = 'none';
+            }, 300);
+        }
+
+        function movePlayer(direction) {
+            const canvas = document.querySelector('.game-world');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Mapear dirección a tecla
+            const keyMap = {
+                'up': 'W',
+                'down': 'S', 
+                'left': 'A',
+                'right': 'D'
+            };
+            
+            playerState.lastKey = keyMap[direction];
+            
+            // Destacar botón presionado
+            const btnId = 'btn-' + direction.charAt(0).toLowerCase();
+            if (direction === 'up') document.getElementById('btn-w').classList.add('pressed');
+            else if (direction === 'down') document.getElementById('btn-s').classList.add('pressed');
+            else if (direction === 'left') document.getElementById('btn-a').classList.add('pressed');
+            else if (direction === 'right') document.getElementById('btn-d').classList.add('pressed');
+            
+            setTimeout(() => {
+                document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('pressed'));
+            }, 150);
+            
+            switch(direction) {
+                case 'up':
+                    playerState.y = Math.max(20, playerState.y - SPEED);
+                    break;
+                case 'down':
+                    playerState.y = Math.min(GROUND_LEVEL, playerState.y + SPEED);
+                    break;
+                case 'left':
+                    playerState.x = Math.max(20, playerState.x - SPEED);
+                    break;
+                case 'right':
+                    playerState.x = Math.min(canvas.offsetWidth - 60, playerState.x + SPEED);
+                    break;
+            }
+            
+            // Verificar si está en el suelo
+            if (playerState.y >= GROUND_LEVEL) {
+                playerState.y = GROUND_LEVEL;
+                playerState.isGrounded = true;
+            }
+            
+            showMovementVector(direction);
+            updatePlayerDisplay();
+        }
+
+        function jumpPlayer() {
+            if (!playerState.isGrounded || playerState.isJumping) return;
+            
+            playerState.lastKey = 'SPACE';
+            playerState.isJumping = true;
+            playerState.isGrounded = false;
+            
+            // Destacar botón de salto
+            document.getElementById('btn-space').classList.add('pressed');
+            setTimeout(() => {
+                document.getElementById('btn-space').classList.remove('pressed');
+            }, 150);
+            
+            const player = document.getElementById('player');
+            player.classList.add('jumping');
+            
+            // Animación del salto con física realista
+            const originalY = playerState.y;
+            const jumpTarget = Math.max(20, originalY - JUMP_HEIGHT);
+            
+            let currentStep = 0;
+            const jumpSteps = 15; // Más frames para movimiento más suave
+            
+            const jumpInterval = setInterval(() => {
+                currentStep++;
+                const progress = currentStep / jumpSteps;
+                
+                if (progress <= 0.4) {
+                    // Subida (más rápida al inicio)
+                    const easeOut = 1 - Math.pow(1 - progress / 0.4, 1.5);
+                    playerState.y = originalY - (JUMP_HEIGHT * easeOut);
+                } else {
+                    // Bajada (aceleración por gravedad)
+                    const fallProgress = (progress - 0.4) / 0.6;
+                    const easeIn = Math.pow(fallProgress, 1.8);
+                    playerState.y = jumpTarget + (JUMP_HEIGHT * easeIn);
+                }
+                
+                updatePlayerDisplay();
+                
+                if (currentStep >= jumpSteps) {
+                    clearInterval(jumpInterval);
+                    
+                    // Aterrizaje
+                    playerState.y = GROUND_LEVEL;
+                    playerState.isGrounded = true;
+                    playerState.isJumping = false;
+                    player.classList.remove('jumping');
+                    updatePlayerDisplay();
+                }
+            }, 20);
+        }
+
+        // Inicializar la pantalla
+        updatePlayerDisplay();
+
+        // Controles de teclado
+        document.addEventListener('keydown', (event) => {
+            switch(event.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    movePlayer('up');
+                    break;
+                case 's':
+                case 'arrowdown':
+                    movePlayer('down');
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    movePlayer('left');
+                    break;
+                case 'd':
+                case 'arrowright':
+                    movePlayer('right');
+                    break;
+                case ' ':
+                    event.preventDefault();
+                    jumpPlayer();
+                    break;
+            }
+        });
+
+        // Actualizar variables de estado en tiempo real
+        setInterval(() => {
+            updatePlayerDisplay();
+        }, 100);
+    </script>
+</body>
+</html>
