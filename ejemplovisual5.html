@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Movimiento Mejorado - Explicación Completa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .game-world {
+            width: 100%;
+            height: 400px;
+            background: #1a1a2e;
+            border: 3px solid #16213e;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .coordinate-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #888, #666);
+            border: 2px solid #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(52, 152, 219, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .menu-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .menu-button {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .menu-button:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(145deg, #c0392b, #a93226);
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .connected {
+            color: #2ecc71;
+        }
+
+        .disconnected {
+            color: #e74c3c;
+        }
+
+        .blocked {
+            color: #f39c12;
+        }
+
+        .controls-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .movement-controls {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .control-btn.pressed {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            transform: scale(0.95);
+        }
+
+        .control-btn:disabled {
+            background: linear-gradient(145deg, #95a5a6, #7f8c8d);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .stats-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label {
+            color: #ccc;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .code-explanation {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            border-left: 4px solid #27ae60;
+            margin: 15px 0;
+        }
+
+        .variable-highlight {
+            background: rgba(255, 255, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .concept-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #27ae60;
+        }
+
+        .step-by-step {
+            counter-reset: step-counter;
+        }
+
+        .step {
+            counter-increment: step-counter;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+            position: relative;
+        }
+
+        .step::before {
+            content: "Paso " counter(step-counter);
+            background: #27ae60;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            top: -8px;
+            left: 15px;
+        }
+
+        .comparison-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .before-after {
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+
+        .before {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .after {
+            border-color: #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .interactive-demo {
+            background: rgba(39, 174, 96, 0.1);
+            border: 2px solid #27ae60;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .warning-box {
+            background: rgba(241, 196, 15, 0.1);
+            border: 2px solid #f1c40f;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .math-example {
+            background: rgba(52, 152, 219, 0.1);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .flow-diagram {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .flow-step {
+            display: inline-block;
+            background: #27ae60;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 5px;
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: "→";
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ffd700;
+            font-size: 18px;
+        }
+
+        .flow-step:last-child::after {
+            display: none;
+        }
+
+        .toggle-btn {
+            background: linear-gradient(145deg, #f39c12, #e67e22);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .problem-solution {
+            display: grid;
+            grid-template-columns: 1fr 50px 1fr;
+            gap: 20px;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .problem {
+            background: rgba(231, 76, 60, 0.1);
+            border: 2px solid #e74c3c;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .solution {
+            background: rgba(39, 174, 96, 0.1);
+            border: 2px solid #27ae60;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .arrow-fix {
+            text-align: center;
+            font-size: 24px;
+            color: #f39c12;
+        }
+
+        .connection-visual {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+
+        .entity-box {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+            position: relative;
+        }
+
+        .script-box {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+            position: relative;
+        }
+
+        .connection-line {
+            height: 3px;
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+            position: relative;
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .connection-line::after {
+            content: "🔗";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Sistema de Movimiento Mejorado - Explicación Completa</h1>
+
+        <!-- INTRODUCCIÓN -->
+        <div class="section">
+            <h2>🎯 ¿Por qué Necesitamos Mejorar el Movimiento?</h2>
+            <p>En la parte anterior creamos un MenuManager, pero ahora necesitamos que el script de movimiento <strong>se comunique</strong> con él. El problema principal es:</p>
+            
+            <div class="problem-solution">
+                <div class="problem">
+                    <h3>❌ PROBLEMA</h3>
+                    <p><strong>Error:</strong> <code>this.menuManager.juegoActivo is not a function</code></p>
+                    <ul>
+                        <li>El script de movimiento no puede encontrar el MenuManager</li>
+                        <li>No sabe si debe procesar o ignorar las teclas WASD</li>
+                        <li>Funciona en el menú cuando no debería</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow-fix">🔧</div>
+                
+                <div class="solution">
+                    <h3>✅ SOLUCIÓN</h3>
+                    <p><strong>Conexión automática</strong> entre scripts</p>
+                    <ul>
+                        <li>Buscar el MenuManager automáticamente</li>
+                        <li>Verificar si el juego está activo antes de moverse</li>
+                        <li>Crear respaldo si no encuentra el MenuManager</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="concept-box">
+                <h3>🔑 Conceptos Clave que Aprenderás</h3>
+                <ul>
+                    <li>🔍 <strong>Búsqueda Automática:</strong> Cómo un script encuentra a otro</li>
+                    <li>🤝 <strong>Comunicación entre Scripts:</strong> Llamar funciones de otros scripts</li>
+                    <li>🛡️ <strong>Programación Defensiva:</strong> Qué hacer si algo falla</li>
+                    <li>🔄 <strong>Estados Condicionales:</strong> Ejecutar código solo cuando es apropiado</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DEMO INTERACTIVA -->
+        <div class="section">
+            <h2>🎮 DEMO: Conexión MenuManager ↔ Movimiento</h2>
+
+            <div class="game-world">
+                <div class="coordinate-grid"></div>
+                <div class="player" id="demo-player">🎮</div>
+                
+                <div class="menu-overlay" id="menu-overlay">
+                    <div class="menu-title">THE BOX</div>
+                    <button class="menu-button" onclick="startGameDemo()">CLICK TO PLAY</button>
+                </div>
+                
+                <div class="status-indicator">
+                    <div><strong>Estado:</strong> <span id="game-state" class="disconnected">MENÚ</span></div>
+                    <div><strong>Movimiento:</strong> <span id="movement-status" class="blocked">BLOQUEADO</span></div>
+                </div>
+                
+                <div class="connection-status">
+                    <div><strong>Conexión:</strong> <span id="connection-state" class="connected">CONECTADO</span></div>
+                    <div><strong>MenuManager:</strong> <span id="manager-found" class="connected">ENCONTRADO</span></div>
+                </div>
+            </div>
+
+            <div class="controls-section">
+                <div class="movement-controls">
+                    <h3>🎮 Controles de Movimiento</h3>
+                    <div class="control-grid">
+                        <div></div>
+                        <button class="control-btn" id="btn-w" onclick="tryMove('up')" disabled>↑<br>W</button>
+                        <div></div>
+                        <button class="control-btn" id="btn-a" onclick="tryMove('left')" disabled>←<br>A</button>
+                        <button class="control-btn" id="btn-s" onclick="tryMove('down')" disabled>↓<br>S</button>
+                        <button class="control-btn" id="btn-d" onclick="tryMove('right')" disabled>→<br>D</button>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button class="toggle-btn" onclick="toggleMenu()">🔄 Alternar Menú/Juego</button>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h3>📊 Estado de Conexión</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">MenuManager:</span>
+                        <span class="stat-value" id="manager-status">ENCONTRADO</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Función juegoActivo:</span>
+                        <span class="stat-value" id="function-status">DISPONIBLE</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Puede Moverse:</span>
+                        <span class="stat-value" id="can-move">NO</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Últimas Verificaciones:</span>
+                        <span class="stat-value" id="check-count">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-demo">
+                <strong>🎯 PRUEBA LA CONEXIÓN:</strong>
+                <ul>
+                    <li>🔴 En el menú: Los controles están deshabilitados (gris)</li>
+                    <li>🎮 Haz click en "CLICK TO PLAY" para activar el juego</li>
+                    <li>🟢 En el juego: Los controles se habilitan (verde)</li>
+                    <li>🔄 Usa "Alternar Menú/Juego" para ver la diferencia</li>
+                    <li>📊 Observa cómo cambian los estados en tiempo real</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- PUNTO 1: EL PROBLEMA ORIGINAL -->
+        <div class="section">
+            <h2>❌ PUNTO 1: El Problema Original</h2>
+
+            <div class="concept-box">
+                <h3>🐛 ¿Qué estaba mal en el código anterior?</h3>
+                <p>El script de movimiento tenía una línea problemática que causaba el crash:</p>
+            </div>
+
+            <div class="comparison-box">
+                <div class="before">
+                    <h4>❌ CÓDIGO PROBLEMÁTICO</h4>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // ❌ Esta línea causaba el error
+    if (!this.menuManager.<span style="background: rgba(255,0,0,0.3);">juegoActivo()</span>) {
+        return;
+    }
+    
+    // Resto del código de movimiento...
+};
+
+// ❌ PROBLEMA: 
+// this.menuManager era null (no existía)
+// Intentar llamar null.juegoActivo() = CRASH!
+                    </div>
+                </div>
+
+                <div class="after">
+                    <h4>✅ CÓDIGO MEJORADO</h4>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // ✅ Verificaciones de seguridad
+    if (this.menuManager && 
+        typeof this.menuManager.<span class="variable-highlight">juegoActivo</span> === 'function') {
+        if (!this.menuManager.<span class="variable-highlight">juegoActivo()</span>) {
+            return; // Solo salir si está conectado Y el juego no está activo
+        }
+    }
+    
+    // Resto del código de movimiento...
+};
+
+// ✅ SOLUCIÓN:
+// Verificar que existe antes de usarlo
+// Verificar que tiene la función antes de llamarla
+                    </div>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h4>⚠️ Lección de Programación Defensiva</h4>
+                <p>Siempre verifica que algo existe antes de usarlo:</p>
+                <div class="code-explanation">
+// ❌ MALO: Asumir que algo existe
+objeto.metodo(); // Si objeto es null = CRASH
+
+// ✅ BUENO: Verificar primero
+if (objeto && typeof objeto.metodo === 'function') {
+    objeto.metodo(); // Seguro
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO 2: BÚSQUEDA AUTOMÁTICA -->
+        <div class="section">
+            <h2>🔍 PUNTO 2: Sistema de Búsqueda Automática</h2>
+
+            <div class="concept-box">
+                <h3>🎯 ¿Cómo encuentra un script a otro script?</h3>
+                <p>En PlayCanvas, los scripts están "pegados" a entidades. Para encontrar un script, necesitamos:</p>
+                <ol>
+                    <li><strong>Buscar todas las entidades</strong> en la escena</li>
+                    <li><strong>Revisar cada entidad</strong> para ver si tiene el script que necesitamos</li>
+                    <li><strong>Guardar la referencia</strong> cuando lo encontremos</li>
+                </ol>
+            </div>
+
+            <div class="connection-visual">
+                <div class="entity-box">
+                    <strong>📦 Entidad 1</strong><br>
+                    <small>Sin scripts</small>
+                </div>
+                <div class="connection-line"></div>
+                <div class="entity-box">
+                    <strong>📦 Entidad 2</strong><br>
+                    <small>Script: movimiento</small>
+                </div>
+                <div class="connection-line"></div>
+                <div class="entity-box">
+                    <strong>📦 Entidad 3</strong><br>
+                    <small>Script: <span style="color: #f1c40f;">menu</span> ← ¡ENCONTRADO!</small>
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Inicializar la Búsqueda:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.initialize = function() {
+    // Variables existentes...
+    this.speed = 5;
+    this.jumpForce = 8;
+    // etc...
+    
+    // NUEVO: Buscar el MenuManager
+    this.<span class="variable-highlight">menuManager</span> = null; // Empezar con null
+    
+    // Buscar otros objetos después de un momento
+    var self = this;
+    setTimeout(function() {
+        self.otroObjeto = self.app.root.findByName('Box2');
+        
+        // NUEVO: Buscar MenuManager
+        self.<span class="variable-highlight">buscarMenuManager()</span>;
+    }, 100);
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Función de Búsqueda Principal:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.buscarMenuManager = function() {
+    // Buscar entidad con script menuManager
+    var <span class="variable-highlight">entidades</span> = this.app.root.children; // Todas las entidades hijas del root
+    
+    for (var i = 0; i < entidades.length; i++) {
+        var <span class="variable-highlight">entidad</span> = entidades[i];
+        
+        // Verificar si esta entidad tiene el script que buscamos
+        if (entidad.script && entidad.script.<span class="variable-highlight">menu</span>) {
+            // ¡ENCONTRADO! Guardar la referencia
+            this.<span class="variable-highlight">menuManager</span> = entidad.script.menu;
+            console.log("✅ Movimiento conectado con MenuManager");
+            return; // Salir del bucle
+        }
+    }
+    
+    // Si llegamos aquí, no se encontró MenuManager
+    this.<span class="variable-highlight">crearRespaldo()</span>;
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Crear Respaldo de Seguridad:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.crearRespaldo = function() {
+    console.log("⚠️ No se encontró MenuManager - Creando referencia de respaldo");
+    
+    // Crear un MenuManager "falso" para evitar errores
+    this.<span class="variable-highlight">menuManager</span> = {
+        <span class="variable-highlight">juegoActivo</span>: function() { 
+            return true; // Siempre permitir movimiento
+        },
+        <span class="variable-highlight">jugadorMurio</span>: function() { 
+            console.log("Game Over (sin MenuManager real)"); 
+        }
+    };
+    
+    console.log("🔧 Respaldo creado - El movimiento funcionará normalmente");
+};
+                    </div>
+                </div>
+            </div>
+
+            <div class="math-example">
+<strong>🧮 Analogía de la Búsqueda:</strong>
+
+Imagina que estás buscando a tu amigo Juan en un edificio:
+
+1. <strong>Buscar en todas las habitaciones:</strong>
+   for (habitacion in edificio) {
+
+2. <strong>Preguntar si Juan está ahí:</strong>
+   if (habitacion.tiene.Juan) {
+
+3. <strong>Guardar la referencia:</strong>
+   this.amigo = habitacion.Juan;
+   ¡ENCONTRADO!
+
+4. <strong>Si no está en ningún lado:</strong>
+   this.amigo = "imaginary_Juan"; // Para no quedarse sin amigo
+            </div>
+        </div>
+
+        <!-- PUNTO 3: VERIFICACIÓN CONDICIONAL -->
+        <div class="section">
+            <h2>🔒 PUNTO 3: Verificación Condicional en Update</h2>
+
+            <div class="concept-box">
+                <h3>🚦 ¿Cuándo debe procesar el movimiento?</h3>
+                <p>El script de movimiento debe ser <strong>inteligente</strong> y solo procesar las teclas cuando es apropiado. La lógica es:</p>
+            </div>
+
+            <div class="flow-diagram">
+                <h3>🔄 Flujo de Verificación en Cada Frame</h3>
+                <div>
+                    <div class="flow-step">¿Existe menuManager?</div>
+                    <div class="flow-step">¿Tiene función juegoActivo?</div>
+                    <div class="flow-step">¿El juego está activo?</div>
+                    <div class="flow-step">✅ Procesar WASD</div>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                    Si cualquier verificación falla → No procesar movimiento
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Update Mejorado con Verificaciones:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // VERIFICAR SI EL JUEGO ESTÁ ACTIVO
+    if (this.<span class="variable-highlight">menuManager</span> && 
+        typeof this.menuManager.<span class="variable-highlight">juegoActivo</span> === 'function') {
+        
+        if (!this.menuManager.<span class="variable-highlight">juegoActivo()</span>) {
+            return; // 🚫 SALIR sin procesar nada
+        }
+    }
+    
+    // ✅ Si llegamos aquí, el juego está activo
+    var input = this.app.keyboard;
+    
+    // MOVIMIENTO NORMAL (solo si no está rebotando)
+    if (this.tiempoRebote <= 0) {
+        if (input.<span class="variable-highlight">isPressed</span>(pc.KEY_W)) {
+            this.entity.translate(0, 0, -this.speed * dt);
+        }
+        if (input.<span class="variable-highlight">isPressed</span>(pc.KEY_S)) {
+            this.entity.translate(0, 0, this.speed * dt);
+        }
+        if (input.<span class="variable-highlight">isPressed</span>(pc.KEY_A)) {
+            this.entity.translate(-this.speed * dt, 0, 0);
+        }
+        if (input.<span class="variable-highlight">isPressed</span>(pc.KEY_D)) {
+            this.entity.translate(this.speed * dt, 0, 0);
+        }
+    }
+    
+    // Resto del código (salto, gravedad, colisiones)...
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Desglose de Verificaciones:</strong>
+                    <div class="code-explanation">
+// 1. ¿Existe el objeto menuManager?
+if (this.<span class="variable-highlight">menuManager</span> && 
+
+// 2. ¿Tiene la función juegoActivo?
+    typeof this.menuManager.<span class="variable-highlight">juegoActivo</span> === 'function') {
+    
+    // 3. ¿El juego está activo según el MenuManager?
+    if (!this.menuManager.<span class="variable-highlight">juegoActivo()</span>) {
+        return; // NO procesar movimiento
+    }
+}
+
+// Si pasó todas las verificaciones:
+// ✅ Procesar movimiento WASD normalmente
+                    </div>
+                </div>
+            </div>
+
+            <div class="comparison-box">
+                <div class="before">
+                    <h4>❌ SIN VERIFICACIONES</h4>
+                    <ul>
+                        <li>Se mueve en el menú</li>
+                        <li>Crashea si no hay MenuManager</li>
+                        <li>Comportamiento impredecible</li>
+                        <li>Mala experiencia de usuario</li>
+                    </ul>
+                </div>
+
+                <div class="after">
+                    <h4>✅ CON VERIFICACIONES</h4>
+                    <ul>
+                        <li>Solo se mueve durante el juego</li>
+                        <li>Nunca crashea</li>
+                        <li>Comportamiento consistente</li>
+                        <li>Experiencia profesional</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO 4: CASOS DE USO -->
+        <div class="section">
+            <h2>🎯 PUNTO 4: Casos de Uso y Escenarios</h2>
+
+            <div class="concept-box">
+                <h3>🎪 ¿En qué situaciones funciona este sistema?</h3>
+                <p>El sistema mejorado maneja correctamente estos escenarios:</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0;">
+                <div style="background: rgba(39,174,96,0.1); padding: 15px; border-radius: 8px; border: 2px solid #27ae60;">
+                    <h4>✅ ESCENARIO 1: Todo Normal</h4>
+                    <ul style="font-size: 0.9em;">
+                        <li>MenuManager existe</li>
+                        <li>Función juegoActivo() existe</li>
+                        <li>Juego está activo</li>
+                        <li><strong>Resultado:</strong> Movimiento funciona</li>
+                    </ul>
+                </div>
+                
+                <div style="background: rgba(241,196,15,0.1); padding: 15px; border-radius: 8px; border: 2px solid #f1c40f;">
+                    <h4>⚠️ ESCENARIO 2: En el Menú</h4>
+                    <ul style="font-size: 0.9em;">
+                        <li>MenuManager existe</li>
+                        <li>Función juegoActivo() existe</li>
+                        <li>Juego NO está activo</li>
+                        <li><strong>Resultado:</strong> Movimiento bloqueado</li>
+                    </ul>
+                </div>
+                
+                <div style="background: rgba(231,76,60,0.1); padding: 15px; border-radius: 8px; border: 2px solid #e74c3c;">
+                    <h4>🚫 ESCENARIO 3: Sin MenuManager</h4>
+                    <ul style="font-size: 0.9em;">
+                        <li>MenuManager NO existe</li>
+                        <li>Se crea respaldo automático</li>
+                        <li>Respaldo siempre permite movimiento</li>
+                        <li><strong>Resultado:</strong> Movimiento funciona</li>
+                    </ul>
+                </div>
+                
+                <div style="background: rgba(155,89,182,0.1); padding: 15px; border-radius: 8px; border: 2px solid #9b59b6;">
+                    <h4>🔄 ESCENARIO 4: Script Incompleto</h4>
+                    <ul style="font-size: 0.9em;">
+                        <li>MenuManager existe</li>
+                        <li>Función juegoActivo() NO existe</li>
+                        <li>Verificación de tipo falla</li>
+                        <li><strong>Resultado:</strong> Movimiento funciona</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Tabla de Decisiones Completa:</strong>
+                    <div class="code-explanation">
+// Pseudocódigo de la lógica completa:
+
+<span class="variable-highlight">VERIFICAR:</span>
+├─ ¿menuManager existe?
+│  ├─ NO → Usar respaldo → ✅ PERMITIR movimiento
+│  └─ SÍ → Continuar verificación
+│
+├─ ¿menuManager.juegoActivo es función?
+│  ├─ NO → ⚠️ Script incompleto → ✅ PERMITIR movimiento  
+│  └─ SÍ → Continuar verificación
+│
+└─ ¿menuManager.juegoActivo() devuelve true?
+   ├─ NO → 🚫 BLOQUEAR movimiento (en menú)
+   └─ SÍ → ✅ PERMITIR movimiento (jugando)
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Código Real de Verificación:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // VERIFICACIÓN COMPLETA
+    if (this.<span class="variable-highlight">menuManager</span> && 
+        typeof this.menuManager.<span class="variable-highlight">juegoActivo</span> === 'function') {
+        
+        // MenuManager existe Y tiene la función
+        if (!this.menuManager.<span class="variable-highlight">juegoActivo()</span>) {
+            // Juego NO activo → BLOQUEAR
+            return;
+        }
+        // Juego activo → CONTINUAR
+    }
+    // Sin MenuManager O sin función → CONTINUAR (respaldo permite todo)
+    
+    // 🎮 PROCESAR MOVIMIENTO
+    var input = this.app.keyboard;
+    
+    if (this.tiempoRebote <= 0) {
+        if (input.isPressed(pc.KEY_W)) {
+            this.entity.translate(0, 0, -this.speed * dt);
+        }
+        // ... resto de teclas
+    }
+    
+    // ... resto del código (salto, gravedad, colisiones)
+};
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO 5: DEBUGGING Y TROUBLESHOOTING -->
+        <div class="section">
+            <h2>🔧 PUNTO 5: Debugging y Solución de Problemas</h2>
+
+            <div class="concept-box">
+                <h3>🐛 ¿Cómo diagnosticar problemas de conexión?</h3>
+                <p>Si el movimiento no funciona correctamente, estos mensajes en la consola te dirán qué está pasando:</p>
+            </div>
+
+            <div class="step-by-step">
+                <div class="step">
+                    <strong>Mensajes de Debug Informativos:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.buscarMenuManager = function() {
+    var entidades = this.app.root.children;
+    
+    console.log("🔍 Buscando MenuManager en", entidades.length, "entidades...");
+    
+    for (var i = 0; i < entidades.length; i++) {
+        var entidad = entidades[i];
+        console.log("📦 Revisando entidad:", entidad.name);
+        
+        if (entidad.script) {
+            console.log("  📜 Tiene script component");
+            console.log("  📋 Scripts disponibles:", Object.keys(entidad.script));
+            
+            if (entidad.script.<span class="variable-highlight">menu</span>) {
+                this.menuManager = entidad.script.menu;
+                console.log("✅ <span style="color: #27ae60;">MenuManager ENCONTRADO en entidad:</span>", entidad.name);
+                
+                // Verificar que tiene las funciones necesarias
+                if (typeof this.menuManager.juegoActivo === 'function') {
+                    console.log("✅ <span style="color: #27ae60;">Función juegoActivo() disponible</span>");
+                } else {
+                    console.log("⚠️ <span style="color: #f39c12;">Función juegoActivo() NO encontrada</span>");
+                }
+                
+                return;
+            }
+        } else {
+            console.log("  ❌ No tiene script component");
+        }
+    }
+    
+    console.log("❌ <span style="color: #e74c3c;">MenuManager NO encontrado</span>");
+    this.crearRespaldo();
+};
+                    </div>
+                </div>
+
+                <div class="step">
+                    <strong>Verificación en Tiempo Real:</strong>
+                    <div class="code-explanation">
+Movimiento.prototype.update = function(dt) {
+    // Contador de verificaciones para debug
+    this.verificaciones = (this.verificaciones || 0) + 1;
+    
+    if (this.<span class="variable-highlight">menuManager</span>) {
+        if (typeof this.menuManager.<span class="variable-highlight">juegoActivo</span> === 'function') {
+            var <span class="variable-highlight">juegoActivo</span> = this.menuManager.juegoActivo();
+            
+            // Log cada 60 frames (1 vez por segundo a 60 FPS)
+            if (this.verificaciones % 60 === 0) {
+                console.log("🎮 Estado del juego:", juegoActivo ? "ACTIVO" : "MENÚ");
+                console.log("🔄 Verificaciones realizadas:", this.verificaciones);
+            }
+            
+            if (!juegoActivo) {
+                return; // No procesar movimiento
+            }
+        } else {
+            // Log solo una vez sobre función faltante
+            if (!this.funcionFaltanteLoggeada) {
+                console.log("⚠️ MenuManager sin función juegoActivo() - usando respaldo");
+                this.funcionFaltanteLoggeada = true;
+            }
+        }
+    } else {
+        // Log solo una vez sobre MenuManager faltante
+        if (!this.managerFaltanteLoggeado) {
+            console.log("⚠️ Sin MenuManager - usando respaldo automático");
+            this.managerFaltanteLoggeado = true;
+        }
+    }
+    
+    // Procesar movimiento...
+};
+                    </div>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h4>🔍 Problemas Comunes y Soluciones</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div>
+                        <strong>❌ PROBLEMA:</strong> "MenuManager NO encontrado"
+                        <ul style="font-size: 0.9em;">
+                            <li>El script se llama diferente (no 'menu')</li>
+                            <li>El script no está asignado a ninguna entidad</li>
+                            <li>La entidad está deshabilitada</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>✅ SOLUCIÓN:</strong>
+                        <ul style="font-size: 0.9em;">
+                            <li>Verificar nombre del script en PlayCanvas</li>
+                            <li>Asegurar que está asignado a una entidad</li>
+                            <li>Verificar que la entidad está enabled</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CÓDIGO COMPLETO FINAL -->
+        <div class="section">
+            <h2>📝 CÓDIGO COMPLETO: Script de Movimiento Mejorado</h2>
+
+            <div class="concept-box">
+                <h3>🏆 El Script Final Completo</h3>
+                <p>Aquí tienes el código completo del script de movimiento con todas las mejoras implementadas:</p>
+            </div>
+
+            <div class="code-explanation">
+var Movimiento = pc.createScript('movimiento');
+ 
+Movimiento.prototype.initialize = function() {
+    // Variables de movimiento
+    this.speed = 5;
+    this.jumpForce = 8;
+    this.isGrounded = true;
+    
+    // Para detección de colisión
+    this.distanciaColision = 1.5;
+    this.enColision = false;
+    this.otroObjeto = null;
+    
+    // Para simular choque
+    this.fuerzaRebote = 3;
+    this.tiempoRebote = 0;
+    this.duracionRebote = 0.3;
+    this.direccionRebote = new pc.Vec3();
+    
+    // <span class="variable-highlight">NUEVO: Variables para conexión con MenuManager</span>
+    this.<span class="variable-highlight">menuManager</span> = null;
+    this.verificaciones = 0;
+    this.funcionFaltanteLoggeada = false;
+    this.managerFaltanteLoggeado = false;
+    
+    // Buscar objetos después de un momento
+    var self = this;
+    setTimeout(function() {
+        self.otroObjeto = self.app.root.findByName('Box2');
+        console.log("Encontró box2:", self.otroObjeto ? "SÍ" : "NO");
+        
+        // <span class="variable-highlight">NUEVO: Buscar MenuManager</span>
+        self.<span class="variable-highlight">buscarMenuManager()</span>;
+    }, 100);
+};
+
+// <span class="variable-highlight">NUEVA FUNCIÓN: Buscar MenuManager automáticamente</span>
+Movimiento.prototype.buscarMenuManager = function() {
+    console.log("🔍 Iniciando búsqueda de MenuManager...");
+    
+    var entidades = this.app.root.children;
+    console.log("📋 Revisando", entidades.length, "entidades en la escena");
+    
+    for (var i = 0; i < entidades.length; i++) {
+        var entidad = entidades[i];
+        console.log("📦 Entidad:", entidad.name);
+        
+        if (entidad.script) {
+            console.log("  📜 Tiene scripts:", Object.keys(entidad.script));
+            
+            if (entidad.script.<span class="variable-highlight">menu</span>) {
+                this.menuManager = entidad.script.menu;
+                console.log("✅ <span style="color: #27ae60;">MenuManager ENCONTRADO en:</span>", entidad.name);
+                
+                if (typeof this.menuManager.juegoActivo === 'function') {
+                    console.log("✅ <span style="color: #27ae60;">Función juegoActivo() verificada</span>");
+                } else {
+                    console.log("⚠️ <span style="color: #f39c12;">Función juegoActivo() faltante</span>");
+                }
+                return;
+            }
+        } else {
+            console.log("  ❌ Sin script component");
+        }
+    }
+    
+    console.log("❌ <span style="color: #e74c3c;">MenuManager NO encontrado - Creando respaldo</span>");
+    this.crearRespaldo();
+};
+
+// <span class="variable-highlight">NUEVA FUNCIÓN: Crear respaldo si no encuentra MenuManager</span>
+Movimiento.prototype.crearRespaldo = function() {
+    console.log("🔧 Creando MenuManager de respaldo...");
+    
+    this.menuManager = {
+        juegoActivo: function() { 
+            return true; // Siempre permitir movimiento
+        },
+        jugadorMurio: function() { 
+            console.log("Game Over (respaldo)"); 
+        }
+    };
+    
+    console.log("✅ <span style="color: #27ae60;">Respaldo creado - Movimiento funcionará normalmente</span>");
+};
+
+Movimiento.prototype.update = function(dt) {
+    // <span class="variable-highlight">NUEVO: Verificación inteligente del estado del juego</span>
+    this.verificaciones = (this.verificaciones || 0) + 1;
+    
+    if (this.<span class="variable-highlight">menuManager</span> && 
+        typeof this.menuManager.<span class="variable-highlight">juegoActivo</span> === 'function') {
+        
+        var juegoActivo = this.menuManager.juegoActivo();
+        
+        // Debug cada segundo
+        if (this.verificaciones % 60 === 0) {
+            console.log("🎮 Estado:", juegoActivo ? "JUGANDO" : "EN MENÚ");
+        }
+        
+        if (!juegoActivo) {
+            return; // <span style="color: #e74c3c;">🚫 BLOQUEAR movimiento en menú</span>
+        }
+    } else {
+        // Log único sobre problemas
+        if (this.menuManager && !this.funcionFaltanteLoggeada) {
+            console.log("⚠️ MenuManager sin función - usando respaldo");
+            this.funcionFaltanteLoggeada = true;
+        } else if (!this.menuManager && !this.managerFaltanteLoggeado) {
+            console.log("⚠️ Sin MenuManager - usando respaldo");
+            this.managerFaltanteLoggeado = true;
+        }
+    }
+    
+    var input = this.app.keyboard;
+    
+    // MOVIMIENTO NORMAL (solo si no está rebotando)
+    if (this.tiempoRebote <= 0) {
+        if (input.isPressed(pc.KEY_W)) {
+            this.entity.translate(0, 0, -this.speed * dt);
+        }
+        if (input.isPressed(pc.KEY_S)) {
+            this.entity.translate(0, 0, this.speed * dt);
+        }
+        if (input.isPressed(pc.KEY_A)) {
+            this.entity.translate(-this.speed * dt, 0, 0);
+        }
+        if (input.isPressed(pc.KEY_D)) {
+            this.entity.translate(this.speed * dt, 0, 0);
+        }
+    }
+    
+    // Aplicar rebote si está ocurriendo
+    if (this.tiempoRebote > 0) {
+        this.entity.translate(
+            this.direccionRebote.x * this.fuerzaRebote * dt,
+            0,
+            this.direccionRebote.z * this.fuerzaRebote * dt
+        );
+        this.tiempoRebote -= dt;
+    }
+    
+    // Salto
+    if (input.wasPressed(pc.KEY_SPACE) && this.isGrounded) {
+        this.entity.translate(0, this.jumpForce * dt, 0);
+        this.isGrounded = false;
+    }
+    
+    // Gravedad
+    if (!this.isGrounded) {
+        this.entity.translate(0, -10 * dt, 0);
+        if (this.entity.getPosition().y <= 0.5) {
+            this.entity.setPosition(
+                this.entity.getPosition().x,
+                0.5,
+                this.entity.getPosition().z
+            );
+            this.isGrounded = true;
+        }
+    }
+    
+    // Detectar colisión
+    this.detectarColision();
+};
+
+// Resto de funciones existentes (sin cambios)
+Movimiento.prototype.detectarColision = function() {
+    if (!this.otroObjeto) return;
+    
+    var distancia = this.entity.getPosition().distance(this.otroObjeto.getPosition());
+    
+    if (distancia < this.distanciaColision && !this.enColision) {
+        this.enColision = true;
+        console.log("¡CHOQUE! Box rebota");
+        this.calcularRebote();
+        this.cambiarColor(1, 0, 0);
+        this.cambiarColorOtro(1, 0, 0);
+        this.efectoImpacto();
+    }
+    
+    if (distancia >= this.distanciaColision && this.enColision) {
+        this.enColision = false;
+        console.log("Se separaron");
+        this.cambiarColor(0.7, 0.7, 0.7);
+        this.cambiarColorOtro(0.7, 0.7, 0.7);
+    }
+};
+
+Movimiento.prototype.calcularRebote = function() {
+    var posBox = this.entity.getPosition();
+    var posBox2 = this.otroObjeto.getPosition();
+    
+    this.direccionRebote.x = posBox.x - posBox2.x;
+    this.direccionRebote.z = posBox.z - posBox2.z;
+    this.direccionRebote.normalize();
+    this.tiempoRebote = this.duracionRebote;
+};
+
+Movimiento.prototype.efectoImpacto = function() {
+    if (!this.otroObjeto) return;
+    
+    var posOriginal = this.otroObjeto.getPosition().clone();
+    this.otroObjeto.translate(0.1, 0, 0);
+    
+    setTimeout(function() {
+        this.otroObjeto.setPosition(posOriginal);
+    }.bind(this), 100);
+};
+
+Movimiento.prototype.cambiarColor = function(r, g, b) {
+    var material = this.entity.render.meshInstances[0].material;
+    material.diffuse.set(r, g, b);
+    material.update();
+};
+
+Movimiento.prototype.cambiarColorOtro = function(r, g, b) {
+    if (!this.otroObjeto) return;
+    var material = this.otroObjeto.render.meshInstances[0].material;
+    material.diffuse.set(r, g, b);
+    material.update();
+};
+            </div>
+        </div>
+
+        <!-- RESUMEN FINAL -->
+        <div class="section">
+            <h2>🎯 RESUMEN: Conexión Perfecta Entre Scripts</h2>
+
+            <div class="concept-box">
+                <h3>🏆 ¡Has Aprendido Comunicación Avanzada Entre Scripts!</h3>
+                <p>Tu sistema de movimiento ahora es completamente profesional y robusto:</p>
+            </div>
+
+            <div class="flow-diagram">
+                <h3>🔄 Flujo Completo de Verificación y Ejecución</h3>
+                <div>
+                    <div class="flow-step">Inicializar Script</div>
+                    <div class="flow-step">Buscar MenuManager</div>
+                    <div class="flow-step">Crear Respaldo si Falta</div>
+                    <div class="flow-step">En Update: Verificar Estado</div>
+                    <div class="flow-step">Procesar o Bloquear</div>
+                    <div class="flow-step">Log de Debug</div>
+                </div>
+            </div>
+
+            <div style="background: rgba(39,174,96,0.1); border: 2px solid #27ae60; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3>✅ Checklist de Implementación Completa</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h4>📝 Nuevas Funciones Agregadas:</h4>
+                        <ul style="font-size: 0.9em;">
+                            <li>✅ <code>buscarMenuManager()</code></li>
+                            <li>✅ <code>crearRespaldo()</code></li>
+                            <li>✅ Verificaciones en <code>update()</code></li>
+                            <li>✅ Sistema de logging para debug</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>🔧 Características Mejoradas:</h4>
+                        <ul style="font-size: 0.9em;">
+                            <li>✅ Conexión automática entre scripts</li>
+                            <li>✅ Programación defensiva</li>
+                            <li>✅ Manejo de errores robusto</li>
+                            <li>✅ Debug informativo y detallado</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(52,152,219,0.1); border: 2px solid #3498db; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3>🎓 Conceptos de Programación Aprendidos</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; margin-bottom: 10px;">🔍</div>
+                        <strong>Búsqueda Dinámica</strong><br>
+                        <small>Encontrar objetos en tiempo de ejecución</small>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; margin-bottom: 10px;">🛡️</div>
+                        <strong>Programación Defensiva</strong><br>
+                        <small>Verificar antes de usar</small>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; margin-bottom: 10px;">🤝</div>
+                        <strong>Comunicación Entre Objetos</strong><br>
+                        <small>Scripts que se hablan entre sí</small>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2em; margin-bottom: 10px;">🔄</div>
+                        <strong>Estados Condicionales</strong><br>
+                        <small>Comportamiento según contexto</small>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(241,196,15,0.1); border: 2px solid #f1c40f; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <h3>🚀 ¡Tu Juego Ahora es Completamente Profesional!</h3>
+                <p style="font-size: 1.1em; margin: 15px 0;">Con el MenuManager y el sistema de movimiento mejorado, tienes:</p>
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin: 20px 0;">
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🎛️</div>
+                        <strong>Menú Profesional</strong>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🎮</div>
+                        <strong>Controles Inteligentes</strong>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🔗</div>
+                        <strong>Conexión Robusta</strong>
+                    </div>
+                    <div style="text-align: center; margin: 10px;">
+                        <div style="font-size: 2em;">🛡️</div>
+                        <strong>Sin Crashes</strong>
+                    </div>
+                </div>
+                <p style="font-size: 1.2em; font-weight: bold; color: #f1c40f;">¡Listo para expandir con nuevas funcionalidades!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global de la demo
+        let demoState = {
+            gameActive: false,
+            playerX: 50,
+            playerY: 175,
+            menuManagerFound: true,
+            functionAvailable: true,
+            canMove: false,
+            checkCount: 0
+        };
+
+        // Simular MenuManager para la demo
+        const fakeMenuManager = {
+            juegoActivo: function() {
+                return demoState.gameActive;
+            }
+        };
+
+        function updateDemoDisplay() {
+            // Actualizar posición del jugador
+            const player = document.getElementById('demo-player');
+            player.style.left = demoState.playerX + 'px';
+            player.style.top = demoState.playerY + 'px';
+
+            // Actualizar estados visuales
+            document.getElementById('game-state').textContent = demoState.gameActive ? 'JUEGO' : 'MENÚ';
+            document.getElementById('game-state').className = demoState.gameActive ? 'connected' : 'disconnected';
+            
+            document.getElementById('movement-status').textContent = demoState.canMove ? 'HABILITADO' : 'BLOQUEADO';
+            document.getElementById('movement-status').className = demoState.canMove ? 'connected' : 'blocked';
+            
+            document.getElementById('connection-state').textContent = demoState.menuManagerFound ? 'CONECTADO' : 'DESCONECTADO';
+            document.getElementById('connection-state').className = demoState.menuManagerFound ? 'connected' : 'disconnected';
+            
+            document.getElementById('manager-found').textContent = demoState.menuManagerFound ? 'ENCONTRADO' : 'FALTANTE';
+            document.getElementById('manager-found').className = demoState.menuManagerFound ? 'connected' : 'disconnected';
+
+            // Actualizar panel de estadísticas
+            document.getElementById('manager-status').textContent = demoState.menuManagerFound ? 'ENCONTRADO' : 'FALTANTE';
+            document.getElementById('function-status').textContent = demoState.functionAvailable ? 'DISPONIBLE' : 'FALTANTE';
+            document.getElementById('can-move').textContent = demoState.canMove ? 'SÍ' : 'NO';
+            document.getElementById('check-count').textContent = demoState.checkCount;
+
+            // Habilitar/deshabilitar controles
+            const buttons = ['btn-w', 'btn-a', 'btn-s', 'btn-d'];
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                btn.disabled = !demoState.canMove;
+                btn.style.opacity = demoState.canMove ? '1' : '0.6';
+            });
+
+            // Mostrar/ocultar overlay del menú
+            const overlay = document.getElementById('menu-overlay');
+            overlay.className = demoState.gameActive ? 'menu-overlay hidden' : 'menu-overlay';
+        }
+
+        function checkGameState() {
+            // Simular la verificación del script de movimiento
+            demoState.checkCount++;
+            
+            if (demoState.menuManagerFound && demoState.functionAvailable) {
+                demoState.canMove = fakeMenuManager.juegoActivo();
+            } else {
+                // Simular respaldo - siempre permite movimiento
+                demoState.canMove = true;
+            }
+            
+            updateDemoDisplay();
+        }
+
+        function startGameDemo() {
+            demoState.gameActive = true;
+            updateDemoDisplay();
+            console.log("🎮 Demo: Juego iniciado");
+        }
+
+        function toggleMenu() {
+            demoState.gameActive = !demoState.gameActive;
+            updateDemoDisplay();
+            console.log("🔄 Demo: Estado cambiado a", demoState.gameActive ? 'JUEGO' : 'MENÚ');
+        }
+
+        function tryMove(direction) {
+            if (!demoState.canMove) {
+                console.log("🚫 Movimiento bloqueado - Juego no está activo");
+                return;
+            }
+
+            const speed = 20;
+            const gameWorld = document.querySelector('.game-world');
+            const maxX = gameWorld.offsetWidth - 50;
+            const maxY = gameWorld.offsetHeight - 50;
+
+            switch(direction) {
+                case 'up':
+                    demoState.playerY = Math.max(10, demoState.playerY - speed);
+                    break;
+                case 'down':
+                    demoState.playerY = Math.min(maxY, demoState.playerY + speed);
+                    break;
+                case 'left':
+                    demoState.playerX = Math.max(10, demoState.playerX - speed);
+                    break;
+                case 'right':
+                    demoState.playerX = Math.min(maxX, demoState.playerX + speed);
+                    break;
+            }
+
+            // Efecto visual en el botón
+            const btnId = 'btn-' + direction.charAt(0).toLowerCase();
+            if (direction === 'up') document.getElementById('btn-w').classList.add('pressed');
+            else if (direction === 'down') document.getElementById('btn-s').classList.add('pressed');
+            else if (direction === 'left') document.getElementById('btn-a').classList.add('pressed');
+            else if (direction === 'right') document.getElementById('btn-d').classList.add('pressed');
+            
+            setTimeout(() => {
+                document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('pressed'));
+            }, 150);
+
+            updateDemoDisplay();
+            console.log("✅ Movimiento procesado:", direction);
+        }
+
+        // Controles de teclado
+        document.addEventListener('keydown', (event) => {
+            if (demoState.gameActive) {
+                switch(event.key.toLowerCase()) {
+                    case 'w':
+                    case 'arrowup':
+                        tryMove('up');
+                        break;
+                    case 's':
+                    case 'arrowdown':
+                        tryMove('down');
+                        break;
+                    case 'a':
+                    case 'arrowleft':
+                        tryMove('left');
+                        break;
+                    case 'd':
+                    case 'arrowright':
+                        tryMove('right');
+                        break;
+                    case 'escape':
+                        toggleMenu();
+                        break;
+                }
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                startGameDemo();
+            }
+        });
+
+        // Verificar estado del juego cada frame (simulando update del script)
+        setInterval(checkGameState, 16); // 60 FPS
+
+        // Inicializar demo
+        updateDemoDisplay();
+
+        // Mostrar instrucciones en consola
+        setTimeout(() => {
+            console.log(`
+🎯 INSTRUCCIONES DE LA DEMO:
+• Haz click en "CLICK TO PLAY" para iniciar el juego
+• Use WASD o los botones para mover (solo funciona si el juego está activo)
+• Presiona ESC o "Alternar Menú/Juego" para cambiar estados
+• Observa cómo los controles se habilitan/deshabilitan automáticamente
+• Revisa las estadísticas en tiempo real en el panel derecho
+            `);
+        }, 1000);
+    </script>
+</body>
+</html>
